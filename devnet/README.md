@@ -64,10 +64,15 @@ and lighthouse, and evaluate archive-node alerts.
 make monitor   # print the URLs + a live tip-lag reading
 ```
 
-- Grafana: http://localhost:3001 (anonymous viewer enabled) - the
-  "Devnet - Archive Node" dashboard shows validating vs archive block height,
-  archive tip lag, and CL peers, refreshing every 5s.
-- Prometheus: http://localhost:9091
+- Grafana: http://localhost:3001 (anonymous viewer enabled). Dashboards are
+  organized into two folders:
+  - **Clients** - official per-client dashboards (Besu, Geth, Teku,
+    Lighthouse) for full single-client visibility.
+  - **Devnet** - purpose-built for this setup: the archive dashboard
+    (validating vs archive block height, tip lag, CL peers) and the validator
+    client dashboard (64 validators status, attestations, proposals).
+- Prometheus: http://localhost:9091 - scrapes besu, teku, geth, lighthouse,
+  and prysm-validator.
 
 Alerts (`monitoring/alerts.yml`), each verified to fire:
 

@@ -93,6 +93,8 @@ services:
       - --interop-start-index=0
       - --suggested-fee-recipient=0x123463a4B065722E99115D6c222f267d9cABb524
       - --accept-terms-of-use
+      - --monitoring-host=0.0.0.0
+      - --monitoring-port=8081
     volumes:
       - teku-vc-data:/data
       - ./config:/config

@@ -1,7 +1,12 @@
 apiVersion: 1
 providers:
-  - name: devnet
-    folder: ''
+  - name: client-dashboards
+    folder: Clients
     type: file
     options:
-      path: /var/lib/grafana/dashboards
+      path: /var/lib/grafana/dashboards/clients
+  - name: devnet-dashboards
+    folder: Devnet
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/devnet
