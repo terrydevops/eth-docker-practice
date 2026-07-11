@@ -2,7 +2,7 @@
 services:
 
   geth:
-    image: ethereum/client-go:${VERSION:-v1.13.14}
+    image: ethereum/client-go:${VERSION:-v1.17.4}
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
     networks:

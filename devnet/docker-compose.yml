@@ -1,0 +1,178 @@
+# local ethereum network, two independent EL/CL pairs
+#
+#   pair A (validating): besu + teku (64 interop validators in-process)
+#   pair B (archive):    geth --gcmode=archive + lighthouse
+#
+# pairs peer over EL p2p (besu is the bootnode) and CL p2p (teku ENR fetched
+# at runtime by a curl sidecar). client diversity across pairs is deliberate:
+# a consensus bug in one client cannot take out both. see docs/operations.md
+#
+# ports: besu rpc :8545 | archive rpc :8547 | teku rest :5051
+
+services:
+
+  init-geth:
+    image: "${GETH_IMAGE}"
+    entrypoint: ["/bin/sh", "-c"]
+    # idempotent: skip when the datadir is already initialized (a running geth
+    # holds the lock, and re-running init against it must not fail the stack)
+    command: ['[ -d /data/geth/chaindata ] && echo "already initialized" || exec geth --datadir=/data --state.scheme=hash init /execution/genesis.json']
+    volumes: ["geth-data:/data", "./execution:/execution"]
+
+  # ---------------- pair A: validating ----------------
+  besu:
+    image: "${BESU_IMAGE}"
+    container_name: besu
+    environment:
+      - BESU_OPTS=-Xmx1g
+    command:
+      - --data-path=/data
+      - --genesis-file=/config/besu-genesis.json
+      - --node-private-key-file=/config/besu-node.key
+      - --sync-mode=FULL
+      - --data-storage-format=BONSAI
+      - --engine-rpc-enabled=true
+      - --engine-jwt-secret=/jwt/pair-a.hex
+      - --engine-host-allowlist=*
+      - --host-allowlist=*
+      - --rpc-http-enabled=true
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-api=ETH,NET,WEB3,TXPOOL,ADMIN
+      - --p2p-port=30303
+    ports: ["8545:8545"]
+    volumes:
+      - besu-data:/data
+      - ./config:/config
+      - ./jwt:/jwt
+
+  teku:
+    image: "${TEKU_IMAGE}"
+    container_name: teku
+    user: "0:0"   # named volume is root-owned; devnet-only convenience
+    environment:
+      - JAVA_OPTS=-Xmx1g
+    command:
+      - --log-destination=CONSOLE
+      - --data-base-path=/data
+      - --network=/config/cl-config.yaml
+      - --initial-state=/config/genesis.ssz
+      - --ee-endpoint=http://besu:8551
+      - --ee-jwt-secret-file=/jwt/pair-a.hex
+      - --Xstartup-target-peer-count=0
+      - --validators-proposer-default-fee-recipient=0x123463a4B065722E99115D6c222f267d9cABb524
+      - --rest-api-enabled=true
+      - --rest-api-interface=0.0.0.0
+      - --rest-api-host-allowlist=*
+      - --p2p-port=9000
+    ports: ["5051:5051"]
+    volumes:
+      - teku-data:/data
+      - ./config:/config
+      - ./jwt:/jwt
+    depends_on:
+      - besu
+
+  # validator client: prysm vc via the standard beacon REST api.
+  # interop devnet keys are built into prysm; teku bn stays the consensus node.
+  validator:
+    image: "${PRYSM_VALIDATOR_IMAGE}"
+    container_name: validator
+    command:
+      - --datadir=/data
+      - --chain-config-file=/config/cl-config.yaml
+      - --enable-beacon-rest-api
+      - --beacon-rest-api-provider=http://teku:5051
+      - --interop-num-validators=64
+      - --interop-start-index=0
+      - --suggested-fee-recipient=0x123463a4B065722E99115D6c222f267d9cABb524
+      - --accept-terms-of-use
+    volumes:
+      - teku-vc-data:/data
+      - ./config:/config
+    depends_on:
+      - teku
+
+  # ---------------- pair B: archive ----------------
+  geth:
+    image: "${GETH_IMAGE}"
+    container_name: geth
+    command:
+      - --datadir=/data
+      - --networkid=32382
+      - --nodekeyhex=${GETH_NODEKEY}
+      - --bootnodes=${BESU_ENODE}
+      # archive configuration, the point of this node
+      - --gcmode=archive
+      - --state.scheme=hash
+      - --syncmode=full
+      - --history.transactions=0
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.api=eth,net,web3,debug,txpool
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.vhosts=*
+      - --authrpc.jwtsecret=/jwt/pair-b.hex
+    ports: ["8547:8545"]
+    volumes:
+      - geth-data:/data
+      - ./jwt:/jwt
+    depends_on:
+      init-geth:
+        condition: service_completed_successfully
+
+  # fetches teku's ENR once its rest api is up, hands it to lighthouse
+  enr-sidecar:
+    image: curlimages/curl:8.10.1
+    user: "0:0"   # named volume is root-owned
+    command: >
+      sh -c 'until curl -sf http://teku:5051/eth/v1/node/identity -o /shared/id.json;
+      do sleep 2; done;
+      sed -e "s/.*\"enr\":\"//" -e "s/\".*//" /shared/id.json > /shared/enr.txt;
+      pid=$$(sed -e "s/.*\"peer_id\":\"//" -e "s/\".*//" /shared/id.json);
+      echo "/dns4/teku/tcp/9000/p2p/$$pid" > /shared/multiaddr.txt;
+      echo "enr: $(cat /shared/enr.txt)"; echo "multiaddr: $(cat /shared/multiaddr.txt)";
+      sleep 15'
+    volumes: ["shared:/shared"]
+    depends_on:
+      - teku
+
+  lighthouse:
+    image: "${LIGHTHOUSE_IMAGE}"
+    container_name: lighthouse
+    entrypoint:
+      - sh
+      - -c
+      - >
+        until [ -s /shared/multiaddr.txt ]; do sleep 2; done;
+        sleep 10;
+        exec lighthouse bn
+        --testnet-dir=/config
+        --boot-nodes="$(cat /shared/enr.txt)"
+        --libp2p-addresses="$(cat /shared/multiaddr.txt)"
+        --execution-endpoint=http://geth:8551
+        --execution-jwt=/jwt/pair-b.hex
+        --datadir=/data
+        --port=9000
+        --disable-upnp
+        --disable-packet-filter
+        --enable-private-discovery
+        --target-peers=4
+        --http
+        --http-address=0.0.0.0
+    volumes:
+      - lighthouse-data:/data
+      - ./config:/config
+      - ./jwt:/jwt
+      - shared:/shared
+    depends_on:
+      - enr-sidecar
+      - geth
+
+volumes:
+  besu-data:
+  teku-vc-data:
+  teku-data:
+  geth-data:
+  lighthouse-data:
+  shared:

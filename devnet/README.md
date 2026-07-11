@@ -1,0 +1,73 @@
+# devnet
+
+A self-contained local Ethereum PoS network for testing operations against a
+chain you fully control - no checkpoint sync, no public testnet, blocks in
+seconds. Two client-diverse pairs:
+
+```
+validating pair                       archive pair
++------------------+                  +-------------------+
+| besu (EL)  :8545 |  <-- EL p2p -->  | geth (EL)  :8547  |
+| teku (CL)  :5051 |  <-- CL p2p -->  | lighthouse (CL)   |
+| prysm vc, 64 val |                  |  --gcmode=archive |
++------------------+                  +-------------------+
+  produces blocks                      follows, keeps full history
+```
+
+The validating pair produces blocks continuously; the archive pair follows
+and retains all historical state, queryable on port 8547. Client diversity
+across the pairs is intentional: a consensus bug in one client cannot take
+out both.
+
+## Run
+
+```bash
+make setup     # node identities, jwt secrets, .env (generated, not committed)
+make genesis   # one-time genesis ceremony (refuses to rerun)
+make up        # start both pairs
+make status    # heads of both ELs + consensus slot
+make traffic   # send transfers so historical state differs across heights
+make verify    # prove the archive property
+make clean     # full reset
+```
+
+Blocks start ~90s after genesis.
+
+## Inspect archive queries
+
+`make verify` asserts what makes this an archive node, not a pruned one:
+
+1. archive head follows the validating head
+2. `eth_getBalance(account, height)` succeeds at any past height (a pruned
+   node returns `missing trie node` beyond its horizon); after `make traffic`
+   the balances differ across heights - real point-in-time state
+3. `debug_traceBlockByNumber` works on old blocks
+4. the geth container runs `--gcmode=archive --state.scheme=hash --syncmode=full --history.transactions=0`
+
+Manual check (funded account balance drops as it spends):
+
+```bash
+for b in 0x1 0x58 0x5e; do
+  curl -s -X POST -H 'content-type: application/json' \
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0x123463a4B065722E99115D6c222f267d9cABb524\",\"$b\"],\"id\":1}" \
+    http://localhost:8547
+done
+```
+
+## Production archive-node operations
+
+The design for running archive nodes in production (client selection,
+capacity, upgrades, backup, monitoring, SLOs) is in
+[docs/archive-node-operations.md](docs/archive-node-operations.md). This
+devnet is the local harness that validates that operational approach.
+
+## Notes
+
+- geth is pinned with `--state.scheme=hash`: recent geth defaults to path
+  storage, which does not support archive mode.
+- validator client here is prysm, using its built-in interop keys for a
+  zero-config devnet. The production validator stack (teku-validator +
+  web3signer + slashing db) lives in the component directories at the repo
+  root.
+- genesis is a one-time ceremony, not part of `make up`: regenerating it on
+  restart would silently fork the chain.

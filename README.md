@@ -21,6 +21,7 @@ besu/ or geth/  <--engine api-->  teku/ or lighthouse/  <--rest-->  teku-validat
 | teku-validator/ | validator client | signs via web3signer by default |
 | web3signer/ | remote signer | postgres slashing db, flyway migrations |
 | mev-boost/ | mev sidecar | relay list per network in .env |
+| devnet/ | local PoS network + archive node | self-contained, custom genesis, blocks in seconds |
 
 ## Why this shape
 

@@ -1,0 +1,18 @@
+# secrets and generated files - never commit
+.env
+**/jwtsecret.hex
+**/*.key
+**/keystore/
+**/validators/keys/
+**/validators/passwords/
+
+# devnet generated artifacts (recreated by make setup / make genesis)
+devnet/jwt/
+devnet/config/genesis.ssz
+devnet/config/config.yaml
+devnet/config/deposit_contract_block.txt
+devnet/config/*-node.key
+devnet/config/besu-genesis.json
+devnet/execution/genesis.json
+
+.DS_Store
