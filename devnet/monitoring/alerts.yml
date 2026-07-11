@@ -1,0 +1,30 @@
+groups:
+  - name: archive-node
+    rules:
+      # node is up but its archive head trails the validating head
+      - alert: ArchiveNodeLagging
+        expr: (sum(ethereum_blockchain_height) - sum(chain_head_block)) > 5
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: "archive node >5 blocks behind the validating node"
+          description: "historical queries are returning stale state"
+
+      # archive node's metrics endpoint is gone (crashed / stopped)
+      - alert: ArchiveNodeDown
+        expr: up{job="geth"} == 0
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: "archive node is not being scraped (down or unreachable)"
+
+      # chain not advancing at all - whole network stalled
+      - alert: ChainStalled
+        expr: increase(ethereum_blockchain_height[2m]) == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "validating node head has not advanced in 2 minutes"

@@ -16,3 +16,4 @@ devnet/config/besu-genesis.json
 devnet/execution/genesis.json
 
 .DS_Store
+devnet/monitoring/grafana/data/

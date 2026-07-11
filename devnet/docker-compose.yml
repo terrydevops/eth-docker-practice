@@ -39,6 +39,9 @@ services:
       - --rpc-http-host=0.0.0.0
       - --rpc-http-api=ETH,NET,WEB3,TXPOOL,ADMIN
       - --p2p-port=30303
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports: ["8545:8545"]
     volumes:
       - besu-data:/data
@@ -64,6 +67,10 @@ services:
       - --rest-api-interface=0.0.0.0
       - --rest-api-host-allowlist=*
       - --p2p-port=9000
+      - --metrics-enabled=true
+      - --metrics-interface=0.0.0.0
+      - --metrics-host-allowlist=*
+      - --metrics-port=8008
     ports: ["5051:5051"]
     volumes:
       - teku-data:/data
@@ -113,6 +120,9 @@ services:
       - --authrpc.addr=0.0.0.0
       - --authrpc.vhosts=*
       - --authrpc.jwtsecret=/jwt/pair-b.hex
+      - --metrics
+      - --metrics.addr=0.0.0.0
+      - --metrics.port=6060
     ports: ["8547:8545"]
     volumes:
       - geth-data:/data
@@ -132,7 +142,7 @@ services:
       pid=$$(sed -e "s/.*\"peer_id\":\"//" -e "s/\".*//" /shared/id.json);
       echo "/dns4/teku/tcp/9000/p2p/$$pid" > /shared/multiaddr.txt;
       echo "enr: $(cat /shared/enr.txt)"; echo "multiaddr: $(cat /shared/multiaddr.txt)";
-      sleep 15'
+      sleep 30'
     volumes: ["shared:/shared"]
     depends_on:
       - teku
@@ -160,6 +170,9 @@ services:
         --target-peers=4
         --http
         --http-address=0.0.0.0
+        --metrics
+        --metrics-address=0.0.0.0
+        --metrics-port=5054
     volumes:
       - lighthouse-data:/data
       - ./config:/config
@@ -168,6 +181,35 @@ services:
     depends_on:
       - enr-sidecar
       - geth
+
+  # ---------------- monitoring ----------------
+  prometheus:
+    image: "${PROMETHEUS_IMAGE}"
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports: ["9091:9090"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    depends_on:
+      - besu
+      - geth
+
+  grafana:
+    image: "${GRAFANA_IMAGE}"
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    ports: ["3001:3000"]
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
 
 volumes:
   besu-data:

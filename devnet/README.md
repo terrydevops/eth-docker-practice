@@ -54,6 +54,33 @@ for b in 0x1 0x58 0x5e; do
 done
 ```
 
+
+## Monitoring
+
+`make up` also starts Prometheus and Grafana. They scrape besu, teku, geth,
+and lighthouse, and evaluate archive-node alerts.
+
+```bash
+make monitor   # print the URLs + a live tip-lag reading
+```
+
+- Grafana: http://localhost:3001 (anonymous viewer enabled) - the
+  "Devnet - Archive Node" dashboard shows validating vs archive block height,
+  archive tip lag, and CL peers, refreshing every 5s.
+- Prometheus: http://localhost:9091
+
+Alerts (`monitoring/alerts.yml`), each verified to fire:
+
+| alert | condition |
+|---|---|
+| ArchiveNodeLagging | archive head >5 blocks behind the validating head for 30s |
+| ArchiveNodeDown | geth metrics endpoint not scrapeable for 30s |
+| ChainStalled | validating head not advancing for 2m |
+
+To see ArchiveNodeDown fire: `docker compose stop geth`, wait ~40s, check
+Prometheus > Alerts (or `curl -s localhost:9091/api/v1/alerts`), then
+`docker compose start geth` and it clears.
+
 ## Production archive-node operations
 
 The design for running archive nodes in production (client selection,

@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: besu
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['besu:9545']
+  - job_name: teku
+    static_configs:
+      - targets: ['teku:8008']
+  - job_name: geth
+    metrics_path: /debug/metrics/prometheus
+    static_configs:
+      - targets: ['geth:6060']
+  - job_name: lighthouse
+    static_configs:
+      - targets: ['lighthouse:5054']

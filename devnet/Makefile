@@ -37,5 +37,11 @@ verify:
 traffic:
 	./scripts/send-traffic.sh
 
+## monitoring URLs + a live tip-lag snapshot
+monitor:
+	@echo "Grafana:    http://localhost:3001 (anon viewer; admin/admin)"
+	@echo "Prometheus: http://localhost:9091"
+	@echo -n "archive tip lag (blocks): "; curl -s -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8545 | python3 -c 'import sys,json;v=int(json.load(sys.stdin)["result"],16);print(v)' >/tmp/_b 2>/dev/null; b=$$(cat /tmp/_b); a=$$(curl -s -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8547 | python3 -c 'import sys,json;print(int(json.load(sys.stdin)["result"],16))'); echo $$((b-a))
+
 logs:
 	docker compose logs -f --tail=20 besu teku prysm-validator geth lighthouse
