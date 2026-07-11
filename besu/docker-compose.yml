@@ -1,0 +1,52 @@
+
+services:
+
+  besu:
+    image: hyperledger/besu:latest
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    networks:
+      - eth-network
+    environment:
+      - BESU_OPTS="-Xmx${MAX_MEMORY:-8g}"
+    ports:
+      # Map the p2p port(30303), RPC HTTP port(8545), engine port (8551), metrics port(9545)
+      - "${PORT_RPC:-8545}:${PORT_RPC:-8545}"
+      - "${PORT_RPC_WS:-8546}:${PORT_RPC_WS:-8546}"
+      - "${PORT_ENGINE:-8551}:${PORT_ENGINE:-8551}"
+      - "${PORT_P2P:-30303}:${PORT_P2P:-30303}/tcp"
+      - "${PORT_P2P:-30303}:${PORT_P2P:-30303}/udp"
+      - "${PORT_METRICS:-9545}:9545"
+    volumes:
+      - ./data:/var/lib/besu
+    command:
+      - --data-path=/var/lib/besu
+      # access the JSON-RPC API and pull Besu metrics
+      - --host-allowlist=${HOST_ALLOWLIST:-*}
+      - --data-storage-format=BONSAI
+      - --sync-mode=X_SNAP
+      - --Xplugin-rocksdb-high-spec-enabled=${X_RDB_HIGH_ENABLED:-true}
+      - --Xsnapsync-synchronizer-flat-db-healing-enabled=true
+      - --engine-rpc-port=${PORT_ENGINE:-8551}
+      - --rpc-http-enabled=true
+      - --rpc-http-cors-origins=*
+      - --rpc-http-api=ETH,NET,WEB3,DEBUG,TXPOOL,ADMIN
+      - --rpc-http-port=${PORT_RPC:-8545}
+      - --rpc-ws-enabled=true
+      - --rpc-ws-port=${PORT_RPC_WS:-8546}
+      - --p2p-port=${PORT_P2P:-30303}
+      - --engine-jwt-secret=/var/lib/besu/jwtsecret.hex
+      - --engine-host-allowlist=${ENGINE_HOST_ALLOWLIST:-*}
+      - --engine-rpc-enabled=true
+      - --metrics-enabled=true
+      - --metrics-host=${METRICS_HOST:-0.0.0.0}
+      - --network=${NETWORK:-holesky}
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}

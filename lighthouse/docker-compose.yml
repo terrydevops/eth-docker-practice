@@ -1,0 +1,50 @@
+
+services:
+
+  lighthouse:
+    image: sigp/lighthouse:${VERSION:-latest}
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    networks:
+      - eth-network
+    ports:
+      # Map the p2p port(9000), REST API port(5051), metrics port(8008)
+      - "${PORT_P2P:-9000}:${PORT_P2P:-9000}/tcp"
+      - "${PORT_P2P:-9000}:${PORT_P2P:-9000}/udp"
+      - "${PORT_P2P_QUIC:-9001}:${PORT_P2P_QUIC:-9001}/udp"
+      - "${PORT_API:-5052}:5052"
+      - "${PORT_METRICS:-5054}:5054"
+    volumes:
+      - ./data:/var/lib/lighthouse
+    command:
+      - lighthouse
+      - bn
+      - --network=${NETWORK:-holesky}
+      - --checkpoint-sync-url=${CHECKPOINT_SYNC_URL:-https://checkpoint-sync.holesky.ethpandaops.io}
+      - --execution-endpoint=${EE_ENDPOINT}
+      - --execution-jwt=/var/lib/lighthouse/jwtsecret.hex
+      - --disable-upnp
+      - --datadir=/var/lib/lighthouse
+      - --builder=${MEV_REPLY:-http://${NET_GATEWAY}:${PORT_MEV:-18550}}
+      - --suggested-fee-recipient=${VALIDATORS_FEE_RECIPIENT}
+      - --http
+      - --http-address=0.0.0.0
+      - --http-port=5052
+      - --http-allow-origin=*
+      - --port=${PORT_P2P:-9000}
+      - --enr-address=${PUBLIC_IP}
+      - --quic-port=${PORT_P2P_QUIC:-9001}
+      - --target-peers=150
+      - --metrics
+      - --metrics-address=0.0.0.0
+      - --metrics-port=5054
+      - --metrics-allow-origin=*
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}

@@ -1,0 +1,6 @@
+---
+
+type: "file-keystore"
+keystoreFile: "/var/lib/web3signer/validators/keys/keystore-xx.json"
+keystorePasswordFile: "/var/lib/web3signer/validators/passwords/keystore-xx.txt"
+

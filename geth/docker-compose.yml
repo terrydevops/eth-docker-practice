@@ -1,0 +1,48 @@
+
+services:
+
+  geth:
+    image: ethereum/client-go:${VERSION:-v1.13.14}
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    networks:
+      - eth-network
+    ports:
+      # Map the p2p port(30303), RPC HTTP port(8545), engine port (8551), metrics port(6060)
+      - "${PORT_RPC:-8545}:${PORT_RPC:-8545}"
+      - "${PORT_RPC_WS:-8546}:${PORT_RPC_WS:-8546}"
+      - "${PORT_ENGINE:-8551}:${PORT_ENGINE:-8551}"
+      - "${PORT_P2P:-30303}:${PORT_P2P:-30303}/tcp"
+      - "${PORT_P2P:-30303}:${PORT_P2P:-30303}/udp"
+      - "${PORT_METRICS:-6060}:6060"
+    volumes:
+      - ./data:/var/lib/geth
+    command:
+      - --${NETWORK:-holesky}
+      - --datadir=/var/lib/geth
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.port=${PORT_RPC:-8545}
+      - --http.vhosts=${HOST_ALLOWLIST:-*}
+      - --http.api=eth,net,engine,rpc,web3
+      - --ws
+      - --ws.addr=0.0.0.0
+      - --ws.port=${PORT_RPC_WS:-8546}
+      - --ws.origins=${HOST_ALLOWLIST:-*}
+      - --ws.api=eth,net,engine,rpc,web3
+      - --authrpc.jwtsecret=/var/lib/geth/jwtsecret.hex
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.port=${PORT_ENGINE:-8551}
+      - --authrpc.vhosts=${ENGINE_HOST_ALLOWLIST:-*}
+      - --metrics
+      - --metrics.addr=0.0.0.0
+      - --metrics.port=6060
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}

@@ -1,0 +1,63 @@
+
+services:
+
+  postgres:
+    image: "postgres:16"
+    restart: unless-stopped
+    networks:
+      - eth-network
+    ports:
+      - "${POSTGRES_IP:-127.0.0.1}:${PORT_POSTGRES:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-web3signer}
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      start_period: 5s
+      interval: 10s
+      timeout: 5s
+
+  web3signer:
+    image: consensys/web3signer:latest
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    depends_on:
+      - postgres
+    networks:
+      - eth-network
+    ports:
+      # Map the rest api post(9000), metrics port(9001)
+      - "${PORT_API:-29000}:9000"
+      - "${PORT_METRICS:-29001}:9001"
+    volumes:
+      - ./data/web3signer:/var/lib/web3signer
+    command:
+      - --key-store-path=/var/lib/web3signer/keys
+      - --http-host-allowlist=${HOST_ALLOWLIST:-*}
+      - --metrics-enabled
+      - --metrics-host-allowlist=${METRICS_HOST_ALLOWLIST:-*}
+      - eth2
+      - --key-manager-api-enabled=true
+      - --keystores-path=/var/lib/web3signer/validators/keys
+      - --keystores-passwords-path=/var/lib/web3signer/validators/passwords
+      - --slashing-protection-enabled=true
+      - --slashing-protection-db-url=${POSTGRES_DSN:-jdbc:postgresql://postgres/web3signer}
+      - --slashing-protection-db-username=${POSTGRES_USER:-postgres}
+      - --slashing-protection-db-password=${POSTGRES_PASSWORD:-postgres}
+      - --slashing-protection-pruning-enabled=true
+      - --slashing-protection-pruning-at-boot-enabled=true
+      - --slashing-protection-pruning-epochs-to-keep=5000
+      - --slashing-protection-pruning-interval=18
+      - --network=${NETWORK}
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}

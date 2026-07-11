@@ -1,0 +1,47 @@
+
+services:
+
+  teku:
+    image: consensys/teku:latest
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    networks:
+      - eth-network
+    ports:
+      # Map the p2p port(9000), REST API port(5051), metrics port(8008)
+      - "${PORT_P2P:-9000}:${PORT_P2P:-9000}/tcp"
+      - "${PORT_P2P:-9000}:${PORT_P2P:-9000}/udp"
+      - "${PORT_API:-5051}:5051"
+      - "${PORT_METRICS:-8008}:8008"
+    environment:
+      - JAVA_OPTS="-Xmx${MAX_MEMORY:-8g}"
+    volumes:
+      - ./data:/var/lib/teku
+    command:
+      - --data-base-path=/var/lib/teku
+      - --ee-endpoint=${EE_ENDPOINT}
+      - --ee-jwt-secret-file=/var/lib/teku/jwtsecret.hex
+      - --rest-api-enabled=true
+      - --rest-api-docs-enabled=true
+      - --rest-api-host-allowlist=${API_HOST_ALLOWLIST:-*}
+      - --validators-proposer-default-fee-recipient=${VALIDATORS_FEE_RECIPIENT}
+      - --metrics-enabled=true
+      - --metrics-host-allowlist=${METRICS_HOST_ALLOWLIST:-*}
+      - --p2p-port=${PORT_P2P:-9000}
+      - --p2p-peer-lower-bound=100
+      - --p2p-peer-upper-bound=150
+      - --initial-state=${INIT_STATE:-https://checkpoint-sync.holesky.ethpandaops.io/eth/v2/debug/beacon/states/finalized}
+      - --checkpoint-sync-url=${CHECKPOINT:-https://checkpoint-sync.holesky.ethpandaops.io}
+      - --validators-builder-registration-default-enabled=true
+      - --builder-endpoint=${MEV_REPLY:-http://${NET_GATEWAY}:${PORT_MEV:-18550}}
+      - --p2p-advertised-ip=${PUBLIC_IP}
+      - --network=${NETWORK}
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}

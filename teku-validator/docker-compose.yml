@@ -1,0 +1,36 @@
+
+services:
+
+  teku-validator:
+    image: consensys/teku:latest
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    networks:
+      - eth-network
+    ports:
+      # Map the metrics port(8008)
+      - "${PORT_METRICS:-8101}:8008"
+    volumes:
+      - ./data:/var/lib/teku
+    command:
+      - vc
+      - --beacon-node-api-endpoint=${BEACON_NODE_API_ENDPOINT}
+      - --validators-proposer-default-fee-recipient=${VALIDATORS_FEE_RECIPIENT}
+      # local keystores, alternative to web3signer, do not enable both
+      #- --validator-keys=/var/lib/teku/validators/keys:/var/lib/teku/validators/passwords
+      - --validators-external-signer-public-keys=${WEB3SIGNER_PUBLIC_KEYS}
+      - --validators-external-signer-url=${WEB3SIGNER_ENDPOINT}
+      - --validators-external-signer-slashing-protection-enabled
+      - --metrics-enabled=true
+      - --metrics-host-allowlist=${METRICS_HOST_ALLOWLIST:-*}
+      - --validators-builder-registration-default-enabled=true
+      - --network=${NETWORK}
+
+networks:
+  eth-network:
+    name: ${NET_NAME}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NET_CIDR}
+          gateway: ${NET_GATEWAY}
