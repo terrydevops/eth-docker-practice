@@ -74,9 +74,9 @@ services:
 
   # validator client: prysm vc via the standard beacon REST api.
   # interop devnet keys are built into prysm; teku bn stays the consensus node.
-  validator:
+  prysm-validator:
     image: "${PRYSM_VALIDATOR_IMAGE}"
-    container_name: validator
+    container_name: prysm-validator
     command:
       - --datadir=/data
       - --chain-config-file=/config/cl-config.yaml

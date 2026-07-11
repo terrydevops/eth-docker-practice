@@ -38,4 +38,4 @@ traffic:
 	./scripts/send-traffic.sh
 
 logs:
-	docker compose logs -f --tail=20 besu teku validator geth lighthouse
+	docker compose logs -f --tail=20 besu teku prysm-validator geth lighthouse
