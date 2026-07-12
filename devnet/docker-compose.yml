@@ -162,6 +162,7 @@ services:
         --testnet-dir=/config
         --boot-nodes="$(cat /shared/enr.txt)"
         --libp2p-addresses="$(cat /shared/multiaddr.txt)"
+        --trusted-peers="$(sed 's|.*/p2p/||' /shared/multiaddr.txt)"
         --execution-endpoint=http://geth:8551
         --execution-jwt=/jwt/pair-b.hex
         --datadir=/data
