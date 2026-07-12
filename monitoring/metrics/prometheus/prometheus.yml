@@ -4,6 +4,7 @@ global:
 
 rule_files:
   - /etc/prometheus/alerts.yml
+  - /etc/prometheus/slo-rules.yml
 
 scrape_configs:
   - job_name: besu
@@ -31,3 +32,10 @@ scrape_configs:
   - job_name: cadvisor
     static_configs:
       - targets: ['cadvisor:8080']
+  # rpc gateway (SLO measurement point) + synthetic prober
+  - job_name: gateway
+    static_configs:
+      - targets: ['gateway:8405']
+  - job_name: rpc-prober
+    static_configs:
+      - targets: ['prober:9600']

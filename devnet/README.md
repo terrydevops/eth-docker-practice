@@ -81,10 +81,38 @@ make monitor   # print the URLs + a live tip-lag reading
   - **Logs** - log volume, error/warn rate, and a live log viewer with a
     per-service filter and free-text search, backed by Loki.
 - Prometheus: http://localhost:9091 - scrapes the five node jobs plus
-  node-exporter and cadvisor.
+  node-exporter, cadvisor, the rpc gateway and the prober.
 - Loki has no host port: Grafana queries it over the internal network. Promtail
   discovers containers via the docker socket and is scoped (by network) to this
   stack, so it does not ingest unrelated containers on a shared host.
+
+## Archive RPC gateway and SLO
+
+Archive queries are served through a gateway (haproxy, port **8548**), which
+is where the SLO is defined and measured - not at the node:
+
+- **Method-class routing**: `debug_`/`trace_` calls are routed to a separate
+  pool with a strict concurrency cap, so one pathological trace cannot starve
+  point reads. Everything else goes to the point-read pool.
+- **Real health checks**: the gateway health check is a JSON-RPC
+  `eth_blockNumber` call, not a tcp probe. A node that accepts connections but
+  cannot answer is ejected.
+- **Synthetic prober**: continuously sends point reads and traces at random
+  historical heights through the gateway, and runs two correctness checks
+  (cross-client block-hash diff geth vs besu, and the genesis balance
+  invariant - which only an archive node can serve).
+- **SLO as code** (`monitoring/metrics/prometheus/slo-rules.yml`): recording
+  rules compute availability and error-budget burn; alerts follow the
+  multi-window multi-burn-rate pattern - fast burn (>14.4x on 5m and 1h)
+  pages, slow burn (>6x on 30m and 6h) tickets, p95 breaches ticket, and a
+  correctness divergence pages immediately.
+
+The **Devnet - Archive RPC SLO** dashboard shows availability, burn rate,
+p95 per method class, correctness status and gateway response codes.
+
+To watch the SLO breach end to end: `docker compose stop geth` - the gateway
+returns 503s, availability drops, `RpcAvailabilityFastBurn` fires within
+~3 minutes; `docker compose start geth` and it clears.
 
 Alerts (`monitoring/alerts.yml`), each verified to fire:
 

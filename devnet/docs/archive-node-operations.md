@@ -77,6 +77,9 @@ The SLIs are split by method class on purpose: a single blended latency number l
 
 | Layer | Tooling in this repo | SLI / SRE concept it grounds |
 |---|---|---|
+| Serving (gateway) | haproxy in front of the archive node (`:8548`), method-class routing: `debug_`/`trace_` to a concurrency-capped heavy pool; health check is a real JSON-RPC call | The SLO measurement point; heavy-pool isolation from §2 |
+| SLIs (prober) | synthetic prober through the gateway: point reads + traces at random historical heights -> latency histograms per class; cross-client block-hash diff + genesis-balance invariant | **Availability SLI**, **latency SLIs**, **correctness probe** |
+| SLO (rules) | recording rules compute availability ratio + error-budget burn; multi-window multi-burn-rate alerts (fast 14.4x pages, slow 6x tickets), p95 breach, divergence pages immediately | Error budget policy as executable code (`slo-rules.yml`) |
 | Chain (business) | Prometheus scrapes besu / teku / geth / lighthouse / validator; 3 archive alerts | **Freshness SLI** (tip-lag) and serving-availability paging |
 | Machine (host) | node-exporter -> `Machine` dashboard | Disk usage / growth / days-to-full, IOPS, memory  -  "the way archive nodes actually die" |
 | Container | cAdvisor -> `Containers` dashboard | Per-process cpu / memory / restarts  -  fleet hygiene |
@@ -90,4 +93,4 @@ The paging rules are wired as Prometheus alerts and map directly to the SRE conc
 | Serving-set unavailability paging | `ArchiveNodeDown`: `up{job="geth"} == 0` for 30s |
 | Chain-not-advancing (whole-network stall) | `ChainStalled`: `increase(ethereum_blockchain_height[2m]) == 0` |
 
-`ArchiveNodeDown` is verified end to end: stopping the archive node moves the alert to `firing`, restarting it clears it. **Honest scope:** the freshness and host/disk SLIs are grounded locally; the availability and latency SLIs are *not*  -  they are gateway-measured and this harness runs no RPC gateway. Those, plus the multi-replica correctness probe and snapshot-restore validation, are production-scale items: designed in §2-4, out of scope for a single-node local harness, and called out here rather than quietly implied.
+The SLO loop is verified end to end: stopping the archive node ejects it from the gateway (503s), availability drops, `RpcAvailabilityFastBurn` fires within minutes, and restarting the node clears it. **Honest scope:** all four SLIs (availability, both latency classes, freshness) and the burn-rate paging policy are grounded locally against synthetic traffic. What remains production-scale by nature: real user traffic (synthetic probes bound the floor, not the shape, of latency), N>=3 replica failover (the local gateway fronts one archive node  -  it demonstrates ejection, not rerouting), the *multi-replica* correctness diff (approximated here cross-client, geth vs besu), and snapshot-restore validation. Designed in §2-4, called out here rather than quietly implied.

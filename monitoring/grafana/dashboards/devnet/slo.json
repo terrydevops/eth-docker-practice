@@ -1,0 +1,107 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "Devnet - Archive RPC SLO",
+  "uid": "devnet-slo",
+  "tags": ["devnet", "slo", "archive"],
+  "templating": { "list": [] },
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "version": 1,
+  "panels": [
+    { "type": "row", "title": "SLO: availability >= 99.9% | point p95 <= 300ms | trace p95 <= 10s", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": [] },
+    {
+      "type": "stat", "title": "Availability (5m)", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 3, "min": 0, "max": 1,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.995 }, { "color": "green", "value": 0.999 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:rpc_availability:ratio_rate5m" } ]
+    },
+    {
+      "type": "stat", "title": "Availability (1h)", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 3, "min": 0, "max": 1,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.995 }, { "color": "green", "value": 0.999 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:rpc_availability:ratio_rate1h" } ]
+    },
+    {
+      "type": "stat", "title": "Budget Burn (5m)", "description": "1.0 = exactly on budget. >14.4 sustained pages.", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 1,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 14.4 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:rpc_error_budget_burn:rate5m" } ]
+    },
+    {
+      "type": "stat", "title": "Correctness", "description": "Cross-client block-hash diff + genesis balance invariant. 0 pages immediately.", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "mappings": [
+        { "type": "value", "options": { "1": { "text": "OK", "color": "green" }, "0": { "text": "DIVERGED", "color": "red" } } } ],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "min(rpc_correctness_ok)" } ]
+    },
+    {
+      "type": "stat", "title": "Point p95", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.15 }, { "color": "red", "value": 0.3 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"point\"}[10m])))" } ]
+    },
+    {
+      "type": "stat", "title": "Trace p95", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 10 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))" } ]
+    },
+
+    {
+      "type": "timeseries", "title": "Error Budget Burn Rate", "description": "Multi-window burn. Page line at 14.4, ticket line at 6.", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10,
+        "thresholdsStyle": { "mode": "line" } },
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 6 }, { "color": "red", "value": 14.4 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:rpc_error_budget_burn:rate5m", "legendFormat": "burn 5m" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:rpc_error_budget_burn:rate1h", "legendFormat": "burn 1h" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Probe Outcomes /s (point class)", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 30, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "error" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] },
+          { "matcher": { "id": "byName", "options": "success" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } } ] }
+        ] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (outcome) (rate(rpc_probe_requests_total{class=\"point\"}[5m]))", "legendFormat": "{{outcome}}" } ]
+    },
+    {
+      "type": "timeseries", "title": "Latency p95 by Method Class", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"point\"}[10m])))", "legendFormat": "point p95" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))", "legendFormat": "trace p95" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Gateway Responses by Code /s", "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 20, "stacking": { "mode": "normal" } } },
+        "overrides": [ { "matcher": { "id": "byRegexp", "options": "/5xx/" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] } ] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (code) (rate(haproxy_backend_http_responses_total{proxy=~\"archive_.+\"}[5m]))", "legendFormat": "{{code}}" } ]
+    }
+  ]
+}

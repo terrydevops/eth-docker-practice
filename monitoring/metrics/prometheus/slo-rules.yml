@@ -1,0 +1,93 @@
+# SLO rules for the archive rpc surface, computed from the synthetic prober
+# (devnet/scripts/prober.mjs) measured through the gateway.
+# SLO: availability >= 99.9% | point p95 <= 300ms | trace p95 <= 10s
+# alerting follows the multi-window multi-burn-rate pattern: a fast burn
+# pages, a slow burn tickets, and neither fires on a single blip.
+
+groups:
+  - name: slo-archive-rpc-recording
+    interval: 15s
+    rules:
+      - record: slo:rpc_availability:ratio_rate5m
+        expr: >
+          sum(rate(rpc_probe_requests_total{class="point",outcome="success"}[5m]))
+          /
+          sum(rate(rpc_probe_requests_total{class="point"}[5m]))
+      - record: slo:rpc_availability:ratio_rate30m
+        expr: >
+          sum(rate(rpc_probe_requests_total{class="point",outcome="success"}[30m]))
+          /
+          sum(rate(rpc_probe_requests_total{class="point"}[30m]))
+      - record: slo:rpc_availability:ratio_rate1h
+        expr: >
+          sum(rate(rpc_probe_requests_total{class="point",outcome="success"}[1h]))
+          /
+          sum(rate(rpc_probe_requests_total{class="point"}[1h]))
+      - record: slo:rpc_availability:ratio_rate6h
+        expr: >
+          sum(rate(rpc_probe_requests_total{class="point",outcome="success"}[6h]))
+          /
+          sum(rate(rpc_probe_requests_total{class="point"}[6h]))
+      # burn rate = fraction of error budget consumed per unit time, where
+      # 1.0 means "exactly on budget for a 99.9% target"
+      - record: slo:rpc_error_budget_burn:rate5m
+        expr: (1 - slo:rpc_availability:ratio_rate5m) / (1 - 0.999)
+      - record: slo:rpc_error_budget_burn:rate30m
+        expr: (1 - slo:rpc_availability:ratio_rate30m) / (1 - 0.999)
+      - record: slo:rpc_error_budget_burn:rate1h
+        expr: (1 - slo:rpc_availability:ratio_rate1h) / (1 - 0.999)
+      - record: slo:rpc_error_budget_burn:rate6h
+        expr: (1 - slo:rpc_availability:ratio_rate6h) / (1 - 0.999)
+
+  - name: slo-archive-rpc-alerts
+    rules:
+      # page: burning >14.4x budget, confirmed on two windows -> at this rate
+      # a 30-day budget is gone in ~2 days
+      - alert: RpcAvailabilityFastBurn
+        expr: >
+          slo:rpc_error_budget_burn:rate5m > 14.4
+          and
+          slo:rpc_error_budget_burn:rate1h > 14.4
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "archive rpc availability fast burn (>14.4x error budget)"
+      # ticket: sustained slow burn eats the budget in under a week
+      - alert: RpcAvailabilitySlowBurn
+        expr: >
+          slo:rpc_error_budget_burn:rate30m > 6
+          and
+          slo:rpc_error_budget_burn:rate6h > 6
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "archive rpc availability slow burn (>6x error budget)"
+      - alert: RpcPointLatencyP95High
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(rpc_probe_duration_seconds_bucket{class="point"}[10m]))) > 0.3
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "point-read p95 above 300ms SLO"
+      - alert: RpcTraceLatencyP95High
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(rpc_probe_duration_seconds_bucket{class="trace"}[10m]))) > 10
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "trace p95 above 10s SLO"
+      # page immediately: a diverging answer on the archive surface is a
+      # correctness incident regardless of user reports
+      - alert: RpcCorrectnessDivergence
+        expr: min(rpc_correctness_ok) == 0
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: "archive rpc correctness probe divergence"

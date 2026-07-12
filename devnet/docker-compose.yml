@@ -7,7 +7,7 @@
 # at runtime by a curl sidecar). client diversity across pairs is deliberate:
 # a consensus bug in one client cannot take out both. see docs/operations.md
 #
-# ports: besu rpc :8545 | archive rpc :8547 | teku rest :5051
+# ports: besu rpc :8545 | archive rpc :8547 | archive gateway :8548 | teku rest :5051
 
 services:
 
@@ -183,6 +183,34 @@ services:
     depends_on:
       - enr-sidecar
       - geth
+
+  # rpc gateway in front of the archive node: the SLO measurement point.
+  # routes debug_/trace_ to a strictly-capped heavy pool, health-checks with
+  # a real JSON-RPC call. config in gateway/haproxy.cfg
+  gateway:
+    image: "${HAPROXY_IMAGE:-haproxy:3.4.2-alpine}"
+    container_name: gateway
+    restart: unless-stopped
+    ports: ["8548:8548"]
+    volumes:
+      - ./gateway/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - geth
+    mem_limit: 64m
+
+  # synthetic prober: emits availability/latency SLIs per method class and
+  # the correctness checks, scraped by prometheus (see monitoring/metrics/
+  # prometheus/slo-rules.yml for the SLO computed from them)
+  prober:
+    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    container_name: prober
+    restart: unless-stopped
+    command: ["node", "/app/prober.mjs"]
+    volumes:
+      - ./scripts/prober.mjs:/app/prober.mjs:ro
+    depends_on:
+      - gateway
+    mem_limit: 128m
 
 volumes:
   besu-data:

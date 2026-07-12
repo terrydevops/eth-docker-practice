@@ -14,6 +14,7 @@ services:
     volumes:
       - ../monitoring/metrics/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../monitoring/metrics/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../monitoring/metrics/prometheus/slo-rules.yml:/etc/prometheus/slo-rules.yml:ro
 
   grafana:
     image: "${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
