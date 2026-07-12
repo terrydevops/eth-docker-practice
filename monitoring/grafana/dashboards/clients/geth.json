@@ -16934,7 +16934,10 @@
     "list": [
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
@@ -16943,13 +16946,16 @@
         "description": null,
         "error": null,
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": "Host",
         "multi": false,
         "name": "host",
         "options": [],
-        "query": "SHOW TAG VALUES WITH KEY = \"host\"",
-        "refresh": 1,
+        "query": {
+          "query": "label_values(chain_head_block, instance)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -17032,5 +17038,5 @@
   "timezone": "",
   "title": "Geth Dashboard",
   "uid": "QC1Arp5Wk",
-  "version": 3
+  "version": 4
 }
