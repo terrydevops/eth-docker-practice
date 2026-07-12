@@ -1,6 +1,7 @@
-# shared monitoring: prometheus + grafana.
+# shared monitoring: metrics (prometheus + grafana) + logs (loki + promtail).
 # included by each environment via COMPOSE_FILE; joins that environment's
-# network so prometheus can reach the node containers by name.
+# network so prometheus can reach the node containers by name and promtail
+# can tail their logs.
 
 services:
   prometheus:
@@ -11,8 +12,8 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
     ports: ["${PROMETHEUS_PORT:-9090}:9090"]
     volumes:
-      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../monitoring/metrics/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/metrics/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
 
   grafana:
     image: "${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
@@ -29,3 +30,57 @@ services:
       - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on: [prometheus]
 
+  loki:
+    image: "${LOKI_IMAGE:-grafana/loki:3.5.1}"
+    container_name: loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ../monitoring/logs/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    mem_limit: 512m
+
+  promtail:
+    image: "${PROMTAIL_IMAGE:-grafana/promtail:3.5.1}"
+    container_name: promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml -config.expand-env=true
+    environment:
+      - NET_NAME=${NET_NAME:-}
+    volumes:
+      - ../monitoring/logs/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [loki]
+    mem_limit: 128m
+
+  # machine monitoring: host cpu/mem/disk/net/filesystem
+  node-exporter:
+    image: "${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.9.1}"
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    pid: host
+    volumes:
+      - /:/host:ro
+    mem_limit: 128m
+
+  # container monitoring: per-container cpu/mem/net/fs (docker)
+  cadvisor:
+    image: "${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.52.1}"
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    mem_limit: 256m
+
+volumes:
+  loki-data:

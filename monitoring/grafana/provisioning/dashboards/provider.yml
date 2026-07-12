@@ -10,3 +10,18 @@ providers:
     type: file
     options:
       path: /var/lib/grafana/dashboards/devnet
+  - name: logs-dashboards
+    folder: Logs
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/logs
+  - name: machine-dashboards
+    folder: Machine
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/machine
+  - name: containers-dashboards
+    folder: Containers
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/containers

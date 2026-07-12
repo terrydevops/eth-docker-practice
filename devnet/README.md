@@ -57,22 +57,34 @@ done
 
 ## Monitoring
 
-`make up` also starts Prometheus and Grafana. They scrape besu, teku, geth,
-and lighthouse, and evaluate archive-node alerts.
+`make up` also starts the shared observability stack. It covers four layers,
+so a problem can be traced from the host down to a single log line:
+
+| layer | collector | what |
+|---|---|---|
+| business (chain) | Prometheus | besu, teku, geth, lighthouse, prysm-validator metrics + archive alerts |
+| machine (host) | node-exporter | cpu, memory, disk, filesystem, network of the host |
+| container | cAdvisor | per-container cpu / memory / network |
+| logs | Loki + Promtail | every container's stdout/stderr, searchable in Grafana |
 
 ```bash
 make monitor   # print the URLs + a live tip-lag reading
 ```
 
-- Grafana: http://localhost:3001 (anonymous viewer enabled). Dashboards are
-  organized into two folders:
-  - **Clients** - official per-client dashboards (Besu, Geth, Teku,
-    Lighthouse) for full single-client visibility.
-  - **Devnet** - purpose-built for this setup: the archive dashboard
-    (validating vs archive block height, tip lag, CL peers) and the validator
-    client dashboard (64 validators status, attestations, proposals).
-- Prometheus: http://localhost:9091 - scrapes besu, teku, geth, lighthouse,
-  and prysm-validator.
+- Grafana: http://localhost:3001 (anonymous viewer enabled). Dashboard folders:
+  - **Clients** - official per-client dashboards (Besu, Geth, Teku, Lighthouse).
+  - **Devnet** - archive dashboard (validating vs archive block height, tip
+    lag, CL peers) and validator dashboard (64 validators, attestations,
+    proposals).
+  - **Machine** - host cpu / memory / disk / network (node-exporter).
+  - **Containers** - per-container cpu / memory / network (cAdvisor).
+  - **Logs** - log volume, error/warn rate, and a live log viewer with a
+    per-service filter and free-text search, backed by Loki.
+- Prometheus: http://localhost:9091 - scrapes the five node jobs plus
+  node-exporter and cadvisor.
+- Loki has no host port: Grafana queries it over the internal network. Promtail
+  discovers containers via the docker socket and is scoped (by network) to this
+  stack, so it does not ingest unrelated containers on a shared host.
 
 Alerts (`monitoring/alerts.yml`), each verified to fire:
 

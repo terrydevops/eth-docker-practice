@@ -40,7 +40,7 @@ network's config. Monitoring is a shared stack included by each environment.
 
 | dir | what |
 |---|---|
-| monitoring/ | prometheus + grafana + dashboards (Clients + Devnet folders), included by each environment |
+| monitoring/ | full observability, included by each environment: metrics (prometheus + node-exporter + cadvisor), logs (loki + promtail), grafana dashboards (Clients, Devnet, Machine, Containers, Logs) |
 | docs/ | day-2 runbook |
 
 Each environment picks its components with `COMPOSE_FILE` in its `.env`, so
