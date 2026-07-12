@@ -8,7 +8,7 @@
 
 ```
                     ┌──────────────── validating node ───────────────┐
-   64 interop keys  │ validator1 ──gRPC/REST── beacon1 ──engine──ge th1 │  RPC :8545
+   64 interop keys  │ validator1 ──gRPC/REST── beacon1 ──engine── geth1 │  RPC :8545
                     └───────────────────┬────────────────────────────┘
                               CL p2p (static peer)   EL p2p (bootnode)
                     ┌───────────────────┴─────── archive node ───────┐
@@ -56,7 +56,16 @@
 
 ## 4. SRE perspective
 
-**SLO for archive queries.** Measured at the gateway, monthly windows: **availability 99.9%** (non-5xx, non-timeout) on the archive read surface; **latency p95 <= 300ms** for point-in-time state reads (`eth_getBalance`/`eth_call`/`eth_getStorageAt` at historical heights), **p95 <= 10s** for the trace class; **freshness: serving tip within 2 epochs of network head for 99% of minutes**. Separate SLOs per method class  -  a single blended number lets slow traces hide a broken read path.
+**Service level indicators and objectives.** Each SLO is a target on a concrete SLI  -  a signal measured at the authenticating gateway over monthly windows. Naming the SLI first is deliberate: the SLI is what the pipeline in §3 must actually emit; the SLO is only the line drawn on it.
+
+| Class | SLI (what is measured) | SLO (target) |
+|---|---|---|
+| Availability | fraction of archive-read requests that return non-5xx, non-timeout | **>= 99.9%** |
+| Latency  -  point reads | p95 of `eth_getBalance` / `eth_call` / `eth_getStorageAt` at historical heights | **<= 300 ms** |
+| Latency  -  traces | p95 of the `debug_` / `trace_` class | **<= 10 s** |
+| Freshness | fraction of minutes the serving tip is within 2 epochs of network head | **>= 99%** |
+
+The SLIs are split by method class on purpose: a single blended latency number lets legitimately slow traces (10-100× a point read) hide a broken read path.
 
 **What breaks the error budget.** Sustained gateway 5xx/timeouts (fast-burn: >14× budget burn over 1h); tip-staleness minutes beyond the freshness SLO; and  -  counted against the budget at full weight even with zero user reports  -  **any correctness incident** (replica divergence, serving pruned-range errors after a mis-config). For compliance/forensics, wrong-but-fast is the worst failure mode we have.
 
@@ -64,13 +73,21 @@
 
 **What pages an on-call engineer.** (1) Serving-set unavailability or gateway fast-burn (availability SLO in danger *now*); (2) tip lag breaching freshness SLO across >=2 replicas simultaneously (common-cause: CL, engine, or upstream network issue); (3) correctness probe divergence  -  immediate page, remove replica from LB; (4) disk projected-to-full < 7 days on any serving replica; (5) golden-snapshot restore validation failure (our rollback floor is gone  -  that's an incident even though users see nothing). Everything else is a ticket, not a page: single-replica loss, slow-burn latency drift, one failed scrape.
 
-**What this repo implements today.** The SLO/paging model above is production-scale; the harness in this repo implements a working subset of it against the live devnet, so the reasoning is demonstrated, not just described:
+**What this repo implements today.** The SLO/paging model above is production-scale; the harness implements a working subset against the live devnet across four observability layers, so the reasoning is demonstrated, not just described. The layers map onto the SLIs and the §3 signal set:
 
-| SRE concept (above) | Implemented signal in this repo |
+| Layer | Tooling in this repo | SLI / SRE concept it grounds |
+|---|---|---|
+| Chain (business) | Prometheus scrapes besu / teku / geth / lighthouse / validator; 3 archive alerts | **Freshness SLI** (tip-lag) and serving-availability paging |
+| Machine (host) | node-exporter -> `Machine` dashboard | Disk usage / growth / days-to-full, IOPS, memory  -  "the way archive nodes actually die" |
+| Container | cAdvisor -> `Containers` dashboard | Per-process cpu / memory / restarts  -  fleet hygiene |
+| Logs | Loki + Promtail -> `Logs` dashboard | Incident-response evidence: searchable per-service error/warn stream |
+
+The paging rules are wired as Prometheus alerts and map directly to the SRE concepts above:
+
+| SRE concept | Implemented alert |
 |---|---|
 | Freshness SLO / tip-lag paging | `ArchiveNodeLagging`: `(sum(ethereum_blockchain_height) - sum(chain_head_block)) > 5` for 30s |
 | Serving-set unavailability paging | `ArchiveNodeDown`: `up{job="geth"} == 0` for 30s |
 | Chain-not-advancing (whole-network stall) | `ChainStalled`: `increase(ethereum_blockchain_height[2m]) == 0` |
-| Freshness dashboard signal | archive-vs-validating block height + tip-lag panels (Grafana, `Devnet` folder) |
 
-`ArchiveNodeDown` was verified end to end: stopping the archive node moves the alert to `firing`, restarting it clears the alert. The production items that need real scale (multi-replica correctness probes, snapshot-restore validation, per-tenant gateway SLOs) are described above but are out of scope for a single-node local harness, and are called out as such.
+`ArchiveNodeDown` is verified end to end: stopping the archive node moves the alert to `firing`, restarting it clears it. **Honest scope:** the freshness and host/disk SLIs are grounded locally; the availability and latency SLIs are *not*  -  they are gateway-measured and this harness runs no RPC gateway. Those, plus the multi-replica correctness probe and snapshot-restore validation, are production-scale items: designed in §2-4, out of scope for a single-node local harness, and called out here rather than quietly implied.
