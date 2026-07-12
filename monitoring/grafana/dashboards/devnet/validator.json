@@ -1971,7 +1971,6 @@
       "type": "stat"
     },
     {
-      "columns": [],
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1983,7 +1982,6 @@
         },
         "overrides": []
       },
-      "fontSize": "100%",
       "gridPos": {
         "h": 7,
         "w": 12,
@@ -1993,288 +1991,8 @@
       "id": 54,
       "interval": "",
       "links": [],
-      "pageSize": null,
       "pluginVersion": "6.5.1",
       "showHeader": true,
-      "sort": {
-        "col": 4,
-        "desc": true
-      },
-      "styles": [
-        {
-          "alias": "Time",
-          "align": "auto",
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "pattern": "Time",
-          "type": "hidden"
-        },
-        {
-          "alias": "",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "job",
-          "thresholds": [],
-          "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "alias": "public key",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "decimals": 2,
-          "link": false,
-          "linkTargetBlank": false,
-          "linkTooltip": "",
-          "linkUrl": "",
-          "pattern": "pubkey",
-          "thresholds": [],
-          "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "alias": "",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "instance",
-          "thresholds": [],
-          "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "alias": "",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "__name__",
-          "thresholds": [],
-          "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "alias": "attested",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #A",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "aggregated",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #C",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "proposed",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #E",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "failed attestations",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #B",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "failed aggregations",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #D",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "balance",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 4,
-          "link": false,
-          "linkTargetBlank": false,
-          "linkTooltip": "",
-          "linkUrl": "",
-          "mappingType": 1,
-          "pattern": "Value #F",
-          "thresholds": [
-            "24",
-            "32"
-          ],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "pubkey",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "link": true,
-          "linkTargetBlank": true,
-          "linkTooltip": "beaconcha.in",
-          "linkUrl": "http://beaconcha.in/validator/${__cell_1:raw}",
-          "mappingType": 1,
-          "pattern": "pubkey_short",
-          "thresholds": [],
-          "type": "string",
-          "unit": "short"
-        },
-        {
-          "alias": "inactivity score",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #H",
-          "thresholds": [
-            ""
-          ],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "alias": "status",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "#F2495C",
-            "#FF9830",
-            "#73BF69"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #J",
-          "thresholds": [],
-          "type": "string",
-          "unit": "none",
-          "valueMaps": [
-            {
-              "text": "unknown",
-              "value": "0"
-            },
-            {
-              "text": "deposited",
-              "value": "1"
-            },
-            {
-              "text": "pending",
-              "value": "2"
-            },
-            {
-              "text": "active",
-              "value": "3"
-            },
-            {
-              "text": "exiting",
-              "value": "4"
-            },
-            {
-              "text": "slashing",
-              "value": "5"
-            },
-            {
-              "text": "exited",
-              "value": "6"
-            }
-          ]
-        }
-      ],
       "targets": [
         {
           "expr": "label_replace(max by(pubkey) (validator_statuses{job=\"prysm-validator\"}), \"pubkey_short\", \"$1\", \"pubkey\", \"(.{10}).*\")  ",
@@ -2344,8 +2062,18 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Validator Process Stats",
-      "transform": "table",
-      "type": "table"
+      "type": "table",
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        }
+      }
     },
     {
       "colors": [
@@ -3266,7 +2994,7 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 25,
+  "schemaVersion": 39,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -3292,5 +3020,5 @@
   "timezone": "",
   "title": "Devnet - Validator Client (Prysm)",
   "uid": "devnet-vc",
-  "version": 102
+  "version": 103
 }

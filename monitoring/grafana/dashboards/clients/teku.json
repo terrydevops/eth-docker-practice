@@ -2085,7 +2085,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 37,
+  "schemaVersion": 39,
   "style": "dark",
   "tags": [
     "eth2.0",
@@ -2143,6 +2143,6 @@
   "timezone": "",
   "title": "Teku Dashboard",
   "uid": "l8RXdVWnz",
-  "version": 9,
+  "version": 10,
   "weekStart": ""
 }

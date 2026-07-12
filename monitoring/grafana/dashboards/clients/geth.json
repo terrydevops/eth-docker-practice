@@ -16927,7 +16927,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 27,
+  "schemaVersion": 39,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -17032,5 +17032,5 @@
   "timezone": "",
   "title": "Geth Dashboard",
   "uid": "QC1Arp5Wk",
-  "version": 2
+  "version": 3
 }
