@@ -39,7 +39,7 @@
 
 **Backup & restore.** Per-replica filesystem/EBS snapshots on a fixed cadence (e.g., every 6h, retained 14d) + one "golden" snapshot validated weekly by actually restoring it and replaying to tip in a staging slot. RTO for replacing a replica = snapshot restore + catch-up sync (minutes-hours), and that number is *measured monthly*, not assumed. The unrecoverable-everything case (all snapshots bad) falls back to resync-from-a-peer or genesis  -  which is why snapshot validation is scheduled work, not best-effort.
 
-**Monitoring.** Alerting rules and dashboards live in code (the same pattern as the Terraform alerting library I run in production today). The signal set that matters for archive nodes:
+**Monitoring.** Alerting rules and dashboards live in code. This repo already implements the pattern in miniature: Prometheus scrapes every node, Grafana serves per-client and archive-specific dashboards, and the archive alerts below are wired and verified to fire (see the repo README). The signal set that matters for archive nodes:
 
 | Signal | Why |
 |---|---|
