@@ -63,3 +63,14 @@
 **What failures are acceptable.** Loss of any single replica (LB reroutes, zero user impact  -  that's why N>=3); p99 latency spikes during compaction or snapshot I/O; CL restarts and short engine-API blips that don't move tip lag past the SLO line; planned drain/upgrade of one replica at a time. All of these consume *zero* error budget by design, and none of them page.
 
 **What pages an on-call engineer.** (1) Serving-set unavailability or gateway fast-burn (availability SLO in danger *now*); (2) tip lag breaching freshness SLO across >=2 replicas simultaneously (common-cause: CL, engine, or upstream network issue); (3) correctness probe divergence  -  immediate page, remove replica from LB; (4) disk projected-to-full < 7 days on any serving replica; (5) golden-snapshot restore validation failure (our rollback floor is gone  -  that's an incident even though users see nothing). Everything else is a ticket, not a page: single-replica loss, slow-burn latency drift, one failed scrape.
+
+**What this repo implements today.** The SLO/paging model above is production-scale; the harness in this repo implements a working subset of it against the live devnet, so the reasoning is demonstrated, not just described:
+
+| SRE concept (above) | Implemented signal in this repo |
+|---|---|
+| Freshness SLO / tip-lag paging | `ArchiveNodeLagging`: `(sum(ethereum_blockchain_height) - sum(chain_head_block)) > 5` for 30s |
+| Serving-set unavailability paging | `ArchiveNodeDown`: `up{job="geth"} == 0` for 30s |
+| Chain-not-advancing (whole-network stall) | `ChainStalled`: `increase(ethereum_blockchain_height[2m]) == 0` |
+| Freshness dashboard signal | archive-vs-validating block height + tip-lag panels (Grafana, `Devnet` folder) |
+
+`ArchiveNodeDown` was verified end to end: stopping the archive node moves the alert to `firing`, restarting it clears the alert. The production items that need real scale (multi-replica correctness probes, snapshot-restore validation, per-tenant gateway SLOs) are described above but are out of scope for a single-node local harness, and are called out as such.
