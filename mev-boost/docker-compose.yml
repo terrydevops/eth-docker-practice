@@ -2,9 +2,7 @@
 services:
 
   mev-boost:
-    image: flashbots/mev-boost:${VERSION:-1.7}
-    networks:
-      - eth-network
+    image: flashbots/mev-boost:${VERSION:-1.12}
     ports:
       - "${PORT_MEV:-18550}:${PORT_MEV:-18550}"
     command: |
@@ -16,7 +14,7 @@ services:
     restart: unless-stopped
 
 networks:
-  eth-network:
+  default:
     name: ${NET_NAME}
     driver: bridge
     ipam:

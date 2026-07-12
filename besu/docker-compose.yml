@@ -2,11 +2,9 @@
 services:
 
   besu:
-    image: hyperledger/besu:latest
+    image: hyperledger/besu:26.6.1
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
-    networks:
-      - eth-network
     environment:
       - BESU_OPTS="-Xmx${MAX_MEMORY:-8g}"
     ports:
@@ -43,7 +41,7 @@ services:
       - --network=${NETWORK:-holesky}
 
 networks:
-  eth-network:
+  default:
     name: ${NET_NAME}
     driver: bridge
     ipam:

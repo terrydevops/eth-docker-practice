@@ -2,11 +2,9 @@
 services:
 
   lighthouse:
-    image: sigp/lighthouse:${VERSION:-latest}
+    image: sigp/lighthouse:${VERSION:-v8.2.0}
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
-    networks:
-      - eth-network
     ports:
       # Map the p2p port(9000), REST API port(5051), metrics port(8008)
       - "${PORT_P2P:-9000}:${PORT_P2P:-9000}/tcp"
@@ -41,7 +39,7 @@ services:
       - --metrics-allow-origin=*
 
 networks:
-  eth-network:
+  default:
     name: ${NET_NAME}
     driver: bridge
     ipam:

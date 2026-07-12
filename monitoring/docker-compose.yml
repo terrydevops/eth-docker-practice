@@ -1,0 +1,31 @@
+# shared monitoring: prometheus + grafana.
+# included by each environment via COMPOSE_FILE; joins that environment's
+# network so prometheus can reach the node containers by name.
+
+services:
+  prometheus:
+    image: "${PROMETHEUS_IMAGE:-prom/prometheus:v3.1.0}"
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports: ["${PROMETHEUS_PORT:-9090}:9090"]
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+
+  grafana:
+    image: "${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    ports: ["${GRAFANA_PORT:-3000}:3000"]
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
+

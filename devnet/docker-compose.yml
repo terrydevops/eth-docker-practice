@@ -184,35 +184,6 @@ services:
       - enr-sidecar
       - geth
 
-  # ---------------- monitoring ----------------
-  prometheus:
-    image: "${PROMETHEUS_IMAGE}"
-    container_name: prometheus
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-    ports: ["9091:9090"]
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
-    depends_on:
-      - besu
-      - geth
-
-  grafana:
-    image: "${GRAFANA_IMAGE}"
-    container_name: grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-    ports: ["3001:3000"]
-    volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      - prometheus
-
 volumes:
   besu-data:
   teku-vc-data:
@@ -220,3 +191,7 @@ volumes:
   geth-data:
   lighthouse-data:
   shared:
+
+networks:
+  default:
+    name: ${NET_NAME:-eth-devnet-network}

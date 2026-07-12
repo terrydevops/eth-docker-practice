@@ -2,10 +2,8 @@
 services:
 
   postgres:
-    image: "postgres:16"
+    image: "postgres:17"
     restart: unless-stopped
-    networks:
-      - eth-network
     ports:
       - "${POSTGRES_IP:-127.0.0.1}:${PORT_POSTGRES:-5432}:5432"
     environment:
@@ -21,13 +19,11 @@ services:
       timeout: 5s
 
   web3signer:
-    image: consensys/web3signer:latest
+    image: consensys/web3signer:26.4.2
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
     depends_on:
       - postgres
-    networks:
-      - eth-network
     ports:
       # Map the rest api post(9000), metrics port(9001)
       - "${PORT_API:-29000}:9000"
@@ -54,7 +50,7 @@ services:
       - --network=${NETWORK}
 
 networks:
-  eth-network:
+  default:
     name: ${NET_NAME}
     driver: bridge
     ipam:

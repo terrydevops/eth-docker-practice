@@ -12,16 +12,41 @@ besu/ or geth/  <--engine api-->  teku/ or lighthouse/  <--rest-->  teku-validat
 
 ## Layout
 
-| dir | role | notes |
+Client definitions live at the top level and are shared. Each network
+directory selects which of them to run (via `COMPOSE_FILE`) and holds that
+network's config. Monitoring is a shared stack included by each environment.
+
+**Clients (shared compose):**
+
+| dir | role |
+|---|---|
+| besu/ | execution client |
+| geth/ | execution client |
+| teku/ | consensus client |
+| lighthouse/ | consensus client |
+| teku-validator/ | validator client (signs via web3signer) |
+| web3signer/ | remote signer + postgres slashing db |
+| mev-boost/ | mev sidecar |
+
+**Environments:**
+
+| dir | what it starts | how |
 |---|---|---|
-| besu/ | execution client | bonsai + snap sync |
-| geth/ | execution client | version pinned in .env |
-| teku/ | consensus client | checkpoint sync, mev wired |
-| lighthouse/ | consensus client | alternative CL |
-| teku-validator/ | validator client | signs via web3signer by default |
-| web3signer/ | remote signer | postgres slashing db, flyway migrations |
-| mev-boost/ | mev sidecar | relay list per network in .env |
-| devnet/ | local PoS network + archive node | self-contained, custom genesis, blocks in seconds |
+| holesky-network/ | besu + teku + teku-validator + web3signer + monitoring on Holesky | `cd holesky-network && docker compose up -d` |
+| mainnet/ | same stack on mainnet | `cd mainnet && docker compose up -d` |
+| devnet/ | local PoS net (besu+teku+prysm-vc validating, geth+lighthouse archive) + monitoring | `cd devnet && make setup genesis up` |
+
+**Shared:**
+
+| dir | what |
+|---|---|
+| monitoring/ | prometheus + grafana + dashboards (Clients + Devnet folders), included by each environment |
+| docs/ | day-2 runbook |
+
+Each environment picks its components with `COMPOSE_FILE` in its `.env`, so
+the client composes are never duplicated. All images are pinned to current
+versions.
+
 
 ## Why this shape
 
