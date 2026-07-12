@@ -1,6 +1,6 @@
 # Local Ethereum PoS network + archive node  -  operator entry points.
 
-.PHONY: setup genesis up down clean status verify traffic logs
+.PHONY: setup genesis up down clean status verify traffic test-rpc logs
 
 ## one-time: node identities, jwt secrets, .env
 setup:
@@ -36,6 +36,10 @@ verify:
 ## send transfers so historical state differs across heights
 traffic:
 	./scripts/send-traffic.sh
+
+## acceptance test of the archive JSON-RPC surface, through the gateway
+test-rpc:
+	./scripts/test-rpc.sh
 
 ## monitoring URLs + a live tip-lag snapshot
 monitor:

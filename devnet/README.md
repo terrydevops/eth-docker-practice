@@ -28,6 +28,7 @@ make up        # start both pairs
 make status    # heads of both ELs + consensus slot
 make traffic   # send transfers so historical state differs across heights
 make verify    # prove the archive property
+make test-rpc  # acceptance test of the JSON-RPC surface, through the gateway
 make clean     # full reset
 ```
 
