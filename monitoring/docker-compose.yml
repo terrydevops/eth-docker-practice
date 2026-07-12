@@ -67,17 +67,25 @@ services:
       - /:/host:ro
     mem_limit: 128m
 
-  # container monitoring: per-container cpu/mem/net/fs (docker)
+  # container monitoring: per-container cpu/mem/net/fs (docker).
+  # pinned to v0.49: the last release with the docker runtime handler -
+  # v0.50+ only sees raw cgroups on a docker engine (no container names,
+  # no spec limits), which breaks the Containers dashboard and alerts.
   cadvisor:
-    image: "${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.52.1}"
+    image: "${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.49.2}"
     container_name: cadvisor
     restart: unless-stopped
+    command:
+      - --docker_only=true
+      - --store_container_labels=false
     privileged: true
     devices:
       - /dev/kmsg
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:ro
+      # the socket is bound as a file: on hosts where /var/run is a symlink,
+      # binding the directory hides the socket and the docker factory fails
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro

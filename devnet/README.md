@@ -115,17 +115,22 @@ To watch the SLO breach end to end: `docker compose stop geth` - the gateway
 returns 503s, availability drops, `RpcAvailabilityFastBurn` fires within
 ~3 minutes; `docker compose start geth` and it clears.
 
-Alerts (`monitoring/alerts.yml`), each verified to fire:
+Alerting follows the same layer split
+(`monitoring/metrics/prometheus/alerts.yml`, SLO alerts in `slo-rules.yml`).
+severity `page` = wake someone, `ticket` = working hours:
 
-| alert | condition |
+| layer | alerts |
 |---|---|
-| ArchiveNodeLagging | archive head >5 blocks behind the validating head for 30s |
-| ArchiveNodeDown | geth metrics endpoint not scrapeable for 30s |
-| ChainStalled | validating head not advancing for 2m |
+| machine | HostDiskWillFillSoon (projected full <7d, page), HostDiskSpaceLow (page), HostOutOfMemory, HostHighCpu |
+| containers | ContainerOomKilled, ContainerMemoryNearLimit (>90% of its limit) |
+| chain | ArchiveNodeLagging (page), ArchiveNodeDown (page), NodeDown (page), ChainStalled (page), AttestationsStalling (page), FinalityStalled |
+| slo | RpcAvailabilityFastBurn (page), SlowBurn, point/trace p95 breach, RpcCorrectnessDivergence (page) |
+| meta | SloMeasurementBlind (prober/gateway down = flying blind), CollectorDown |
 
-To see ArchiveNodeDown fire: `docker compose stop geth`, wait ~40s, check
-Prometheus > Alerts (or `curl -s localhost:9091/api/v1/alerts`), then
-`docker compose start geth` and it clears.
+Two drills are verified end to end: `docker compose stop geth` fires
+ArchiveNodeDown then RpcAvailabilityFastBurn; `docker compose stop
+prysm-validator` fires ChainStalled ~2 minutes later (nobody signs
+proposals). Both clear on restart.
 
 ## Production archive-node operations
 

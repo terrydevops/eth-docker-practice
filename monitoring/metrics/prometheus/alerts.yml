@@ -1,5 +1,70 @@
+# alerting rules, grouped by observability layer (machine -> container ->
+# chain). the SLO layer lives in slo-rules.yml next to its recording rules.
+# severity: page = wake someone up, ticket = fix during working hours.
+
 groups:
-  - name: archive-node
+  # ---- machine (node-exporter) --------------------------------------------
+  - name: machine
+    rules:
+      # the way archive nodes actually die: disk full. alert on projected
+      # days-to-full, not a static percentage (see docs §3 Monitoring)
+      - alert: HostDiskWillFillSoon
+        expr: >
+          predict_linear(node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"}[6h],
+            7 * 24 * 3600) < 0
+        for: 30m
+        labels:
+          severity: page
+        annotations:
+          summary: "disk projected to fill within 7 days at current growth"
+      - alert: HostDiskSpaceLow
+        expr: >
+          node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"}
+          / node_filesystem_size_bytes{fstype=~"ext4|xfs|btrfs"} < 0.10
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "filesystem under 10% free space"
+      - alert: HostOutOfMemory
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "host memory under 10% available"
+      - alert: HostHighCpu
+        expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.90
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "host cpu above 90% for 15 minutes"
+
+  # ---- containers (cadvisor) ----------------------------------------------
+  - name: containers
+    rules:
+      - alert: ContainerOomKilled
+        expr: increase(container_oom_events_total[10m]) > 0
+        labels:
+          severity: ticket
+        annotations:
+          summary: "container hit an OOM kill in the last 10 minutes"
+      # working set close to the configured memory limit = next OOM candidate.
+      # the limit filter excludes unlimited containers (limit reported as huge)
+      - alert: ContainerMemoryNearLimit
+        expr: >
+          container_memory_working_set_bytes{name!=""}
+          / (container_spec_memory_limit_bytes{name!=""} != 0) > 0.90
+          and container_spec_memory_limit_bytes{name!=""} < 1e15
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "container above 90% of its memory limit"
+
+  # ---- chain (client + validator metrics) ---------------------------------
+  - name: chain
     rules:
       # node is up but its archive head trails the validating head
       - alert: ArchiveNodeLagging
@@ -20,6 +85,16 @@ groups:
         annotations:
           summary: "archive node is not being scraped (down or unreachable)"
 
+      # any other node process down. pages faster than the symptom alerts
+      # below it: a dead validator client stalls the chain ~2 minutes later
+      - alert: NodeDown
+        expr: up{job=~"besu|teku|lighthouse|prysm-validator"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "node process {{ $labels.job }} is not being scraped"
+
       # chain not advancing at all - whole network stalled
       - alert: ChainStalled
         expr: increase(ethereum_blockchain_height[2m]) == 0
@@ -28,3 +103,41 @@ groups:
           severity: page
         annotations:
           summary: "validating node head has not advanced in 2 minutes"
+
+      # validators are missing duties: penalties are accruing right now
+      - alert: AttestationsStalling
+        expr: max(beacon_slot{job="teku"}) - max(validator_last_attested_slot) > 4
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "validators have not attested for >4 slots"
+
+      # finality not advancing - network-wide symptom
+      - alert: FinalityStalled
+        expr: increase(beacon_finalized_epoch[15m]) == 0
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "finalized epoch has not advanced in 15 minutes"
+
+  # ---- meta: the measurement pipeline itself ------------------------------
+  - name: monitoring-meta
+    rules:
+      # if the gateway or prober is gone the SLO is unmeasured - flying blind
+      # is worse than a false page
+      - alert: SloMeasurementBlind
+        expr: up{job=~"gateway|rpc-prober"} == 0
+        for: 2m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "SLO measurement pipeline down ({{ $labels.job }}) - availability/latency SLIs are blind"
+      - alert: CollectorDown
+        expr: up{job=~"node-exporter|cadvisor"} == 0
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "observability collector {{ $labels.job }} is down"
