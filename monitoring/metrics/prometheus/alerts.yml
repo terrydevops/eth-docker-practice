@@ -114,10 +114,14 @@ groups:
           summary: "validators have not attested for >4 slots"
 
       # finality not advancing - network-wide symptom. scoped to the CL
-      # clients: the validator client exports the same metric name as a
-      # constant 0, which would fire this forever
+      # clients (the validator client exports the same metric as a constant
+      # 0), and gated on finality existing at all: a brand-new chain has no
+      # finality for its first epochs, and that is ChainStalled's job anyway
       - alert: FinalityStalled
-        expr: max(increase(beacon_finalized_epoch{job=~"teku|lighthouse"}[15m])) == 0
+        expr: >
+          max(increase(beacon_finalized_epoch{job=~"teku|lighthouse"}[15m])) == 0
+          and
+          max(beacon_finalized_epoch{job=~"teku|lighthouse"}) > 0
         for: 5m
         labels:
           severity: ticket

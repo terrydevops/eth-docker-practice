@@ -76,6 +76,7 @@ const randomHeight = (n) => '0x' + (1 + Math.floor(Math.random() * n)).toString(
 // node answering with an error both count against availability.
 async function pointProbe() {
   const n = await head()
+  if (n === 0) return // chain has not started yet - nothing to measure
   const r = n ? await rpc(GATEWAY, 'eth_getBalance', [ACCOUNT, randomHeight(n)]) : { ok: false, dt: 0 }
   inc('rpc_probe_requests_total', { class: 'point', outcome: r.ok ? 'success' : 'error' })
   observe('rpc_probe_duration_seconds', { class: 'point' }, r.dt)
@@ -85,6 +86,7 @@ async function pointProbe() {
 // gateway to the heavy pool
 async function traceProbe() {
   const n = await head()
+  if (n === 0) return // chain has not started yet
   const r = n
     ? await rpc(GATEWAY, 'debug_traceBlockByNumber', [randomHeight(n), { tracer: 'callTracer' }], 60000)
     : { ok: false, dt: 0 }
