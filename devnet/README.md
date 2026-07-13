@@ -10,14 +10,25 @@ validating pair                       archive pair
 | besu (EL)  :8545 |  <-- EL p2p -->  | geth (EL)  :8547  |
 | teku (CL)  :5051 |  <-- CL p2p -->  | lighthouse (CL)   |
 | prysm vc, 64 val |                  |  --gcmode=archive |
-+------------------+                  +-------------------+
-  produces blocks                      follows, keeps full history
++------------------+                  +---------+---------+
+  produces blocks                               |
+                                      gateway (haproxy) :8548
+                                      point pool | heavy pool
+                                                ^
+                                      prober: SLIs -> prometheus
+
+observability (shared): prometheus + node-exporter + cadvisor + loki/promtail
+                        -> grafana :3001 (10 dashboards, 19 alerts)
 ```
 
 The validating pair produces blocks continuously; the archive pair follows
-and retains all historical state, queryable on port 8547. Client diversity
-across the pairs is intentional: a consensus bug in one client cannot take
-out both.
+and retains all historical state. Archive queries are served through the
+gateway on port 8548 (raw node RPC stays on 8547 for debugging). Client
+diversity across the pairs is intentional: a consensus bug in one client
+cannot take out both.
+
+Resource note: the full stack is ~18 containers; plan for **8GB RAM and
+4+ cores** for the Docker VM.
 
 ## Run
 

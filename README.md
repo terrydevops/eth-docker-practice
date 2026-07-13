@@ -3,11 +3,29 @@
 Docker compose stacks for Ethereum nodes and validators. One directory per
 component, deployed independently, joined by a shared bridge network.
 
-```
-besu/ or geth/  <--engine api-->  teku/ or lighthouse/  <--rest-->  teku-validator/
-     EL                                CL                                VC
-                                        |                                 |
-                                   mev-boost/                       web3signer/ + postgres
+```mermaid
+flowchart TB
+  subgraph ENV["environments - each picks components via COMPOSE_FILE"]
+    HOLESKY[holesky-network]
+    MAINNET[mainnet]
+    DEVNET["devnet - local PoS net + archive node + rpc gateway/SLO"]
+  end
+  subgraph CLIENTS["shared client composes"]
+    EL["EL: besu / geth"] <-->|engine api| CL["CL: teku / lighthouse"]
+    CL <-->|beacon rest| VC["VC: teku-validator"]
+    VC -->|remote signing| WS["web3signer + postgres slashing db"]
+    CL --- MEV[mev-boost]
+  end
+  subgraph OBS["monitoring - shared observability"]
+    PROM["metrics: prometheus + node-exporter + cadvisor"] --> GRAF[grafana]
+    LOKI["logs: loki + promtail"] --> GRAF
+  end
+  HOLESKY --> CLIENTS
+  MAINNET --> CLIENTS
+  DEVNET --> CLIENTS
+  HOLESKY --> OBS
+  MAINNET --> OBS
+  DEVNET --> OBS
 ```
 
 ## Layout

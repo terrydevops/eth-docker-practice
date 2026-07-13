@@ -7,14 +7,18 @@
 ## 1. Local validation harness (this repo)
 
 ```
-                    ┌──────────────── validating node ───────────────┐
-   64 interop keys  │ validator1 ──gRPC/REST── beacon1 ──engine── geth1 │  RPC :8545
-                    └───────────────────┬────────────────────────────┘
-                              CL p2p (static peer)   EL p2p (bootnode)
-                    ┌───────────────────┴─────── archive node ───────┐
-                    │              beacon2 ──engine── geth2           │  RPC :8547
-                    │   (follows the chain)     --gcmode=archive      │
-                    └──────────────────────────────────────────────────┘
+                 ┌───────────────── validating pair ─────────────────┐
+ 64 interop keys │  prysm vc ──REST── teku ──engine api── besu       │ RPC :8545
+                 └────────────────────┬──────────────────────────────┘
+                        CL p2p (trusted peer)    EL p2p (bootnode)
+                 ┌────────────────────┴────────── archive pair ──────┐
+                 │  lighthouse ──engine api── geth --gcmode=archive  │ RPC :8547
+                 └────────────────────┬──────────────────────────────┘
+                                      │
+                        gateway (haproxy) :8548  -  SLO measurement point
+                        point-read pool │ heavy pool (debug_/trace_)
+                                      ▲
+                        prober: synthetic SLIs ──▶ prometheus/grafana
 ```
 
 **What it proves.** A two-pair PoS devnet: one pair produces blocks continuously (64 validators, every fork through Electra active from genesis), the second pair follows the chain with **`--gcmode=archive --syncmode=full --history.transactions=0`**  -  every block executed from genesis, no state pruning, full transaction index. `make verify` asserts the archive property directly: point-in-time balance reads and `debug_traceBlockByNumber` succeed at arbitrary historical heights, which a pruned node cannot serve.
@@ -23,7 +27,7 @@
 
 - **Genesis is a ceremony, not a boot step.** Genesis generation is an explicit, refuse-to-rerun script (`scripts/genesis.sh`), not a compose service. Regenerating genesis on restart silently forks a network; the failure mode was reproduced during development and designed out.
 - **Deterministic identities.** EL nodekeys and the CL libp2p key are pre-generated (`scripts/gen-identities.mjs`) so peer topology is declarative and reproducible  -  no discovery races, no "works on second boot".
-- **Client choice is harness-pragmatic, not a production endorsement.** geth+Prysm has the smallest reproducible devnet-genesis tooling. Production client selection is a capacity/economics decision (§2).
+- **Client choice is harness-pragmatic, not a production endorsement.** prysmctl provides the smallest reproducible genesis ceremony (hence the prysm validator client with interop keys), and the four node clients are deliberately split besu+teku / geth+lighthouse so no client appears on both sides. Production client selection is a capacity/economics decision (§2).
 
 ## 2. Production architecture
 
