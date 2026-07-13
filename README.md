@@ -182,6 +182,14 @@ make monitor   # print the URLs + a live tip-lag reading
   discovers containers via the docker socket and is scoped (by network) to this
   stack, so it does not ingest unrelated containers on a shared host.
 
+Live views from a running devnet:
+
+![Validator client dashboard](docs/images/validator-dashboard.png)
+*64 validators attesting and proposing; inclusion distance holding at 1.0.*
+
+![Logs dashboard](docs/images/logs-dashboard.png)
+*Loki: log volume and error/warn rate per service, with a searchable live tail.*
+
 ### Archive RPC gateway and SLO
 
 Archive queries are served through a gateway (haproxy, port **8548**), which
@@ -226,6 +234,10 @@ Two drills are verified end to end: `docker compose stop geth` fires
 ArchiveNodeDown then RpcAvailabilityFastBurn; `docker compose stop
 prysm-validator` fires ChainStalled ~2 minutes later (nobody signs
 proposals). Both clear on restart.
+
+![Archive RPC SLO dashboard](docs/images/slo-dashboard.png)
+*The SLO dashboard: availability against the 99.9% objective, error-budget
+burn rate, correctness probes, and per-method-class p95 latency.*
 
 ### Production archive-node operations
 
