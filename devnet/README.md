@@ -32,6 +32,22 @@ Resource note: the full stack is ~18 containers; plan for **8GB RAM and
 
 ## Run
 
+One command (macOS / Ubuntu; needs docker with compose v2, curl, python3):
+
+```bash
+git clone https://github.com/terrydevops/eth-docker-practice.git
+cd eth-docker-practice/devnet
+./scripts/quickstart.sh
+```
+
+It checks prerequisites, generates identities (local node, or a docker
+container if node is not installed), runs the genesis ceremony, starts the
+stack, waits for blocks, sends traffic, and runs the full verification
+suite. About 5 minutes end to end. `./scripts/quickstart.sh clean` tears
+everything down.
+
+The same steps individually, via make:
+
 ```bash
 make setup     # node identities, jwt secrets, .env (generated, not committed)
 make genesis   # one-time genesis ceremony (refuses to rerun)

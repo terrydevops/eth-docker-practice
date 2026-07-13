@@ -7,6 +7,11 @@
 # Usage: ./scripts/verify-archive.sh [archive_rpc] [validating_rpc]
 set -euo pipefail
 
+# extract .result from a json-rpc response (python3: present on macos + ubuntu)
+jres() { python3 -c 'import sys,json
+r=json.load(sys.stdin).get("result")
+print(r if not isinstance(r,(dict,list)) else json.dumps(r))'; }
+
 ARCHIVE=${1:-http://localhost:8547}
 FULL=${2:-http://localhost:8545}   # besu, the validating EL
 DEV_ACCOUNT=0x123463a4B065722E99115D6c222f267d9cABb524
@@ -18,8 +23,8 @@ rpc() { # rpc <endpoint> <method> [params-json]
 hex2dec() { python3 -c "import sys; print(int(sys.argv[1], 16))" "$1"; }
 
 echo "== 1. Chain following =="
-head_full=$(rpc "$FULL" eth_blockNumber | jq -r .result)
-head_arch=$(rpc "$ARCHIVE" eth_blockNumber | jq -r .result)
+head_full=$(rpc "$FULL" eth_blockNumber | jres)
+head_arch=$(rpc "$ARCHIVE" eth_blockNumber | jres)
 echo "validating node head: $(hex2dec "$head_full")"
 echo "archive    node head: $(hex2dec "$head_arch")"
 lag=$(( $(hex2dec "$head_full") - $(hex2dec "$head_arch") ))
@@ -36,13 +41,13 @@ head_dec=$(hex2dec "$head_arch")
 for pct in 1 25 50 75; do
   block=$(( head_dec * pct / 100 )); [ "$block" -eq 0 ] && block=1
   hexblock=$(printf '0x%x' "$block")
-  bal=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"$hexblock\"]" | jq -r .result)
+  bal=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"$hexblock\"]" | jres)
   echo "balance @ block $block: $bal"
   [ "$bal" != "null" ] || { echo "FAIL: no historical state at block $block"; exit 1; }
 done
 # Same probe against genesis-adjacent state
-bal1=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"0x1\"]" | jq -r .result)
-bal_now=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"latest\"]" | jq -r .result)
+bal1=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"0x1\"]" | jres)
+bal_now=$(rpc "$ARCHIVE" eth_getBalance "[\"$DEV_ACCOUNT\",\"latest\"]" | jres)
 echo "balance @ block 1: $bal1"
 echo "balance @ latest : $bal_now"
 if [ "$bal1" != "$bal_now" ]; then
@@ -54,7 +59,9 @@ fi
 echo
 echo "== 3. debug/trace availability on historical blocks =="
 mid=$(printf '0x%x' $(( head_dec / 2 )))
-trace=$(rpc "$ARCHIVE" debug_traceBlockByNumber "[\"$mid\",{\"tracer\":\"callTracer\"}]" | jq -r 'if .error then "ERROR: "+.error.message else "ok ("+( .result|length|tostring )+" txs traced)" end')
+trace=$(rpc "$ARCHIVE" debug_traceBlockByNumber "[\"$mid\",{\"tracer\":\"callTracer\"}]" | python3 -c 'import sys,json
+b=json.load(sys.stdin)
+print("ERROR: "+b["error"]["message"] if b.get("error") else "ok (%d txs traced)" % len(b.get("result") or []))')
 echo "debug_traceBlockByNumber @ $mid: $trace"
 
 echo

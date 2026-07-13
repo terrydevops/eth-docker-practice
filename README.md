@@ -52,7 +52,7 @@ network's config. Monitoring is a shared stack included by each environment.
 |---|---|---|
 | holesky-network/ | besu + teku + teku-validator + web3signer + monitoring on Holesky | `cd holesky-network && docker compose up -d` |
 | mainnet/ | same stack on mainnet | `cd mainnet && docker compose up -d` |
-| devnet/ | local PoS net (besu+teku+prysm-vc validating, geth+lighthouse archive) + monitoring | `cd devnet && make setup genesis up` |
+| devnet/ | local PoS net (besu+teku+prysm-vc validating, geth+lighthouse archive) + gateway/SLO + monitoring | `cd devnet && ./scripts/quickstart.sh` |
 
 **Shared:**
 

@@ -2,9 +2,14 @@
 
 .PHONY: setup genesis up down clean status verify traffic test-rpc logs
 
-## one-time: node identities, jwt secrets, .env
+## one-time: node identities, jwt secrets, .env (uses local node, or a
+## docker container when node is not installed)
 setup:
-	node scripts/gen-identities.mjs
+	@if command -v node >/dev/null 2>&1; then \
+		node scripts/gen-identities.mjs; \
+	else \
+		docker run --rm --user "$$(id -u):$$(id -g)" -v "$$(pwd)":/w -w /w node:26.5.0-alpine node scripts/gen-identities.mjs; \
+	fi
 
 ## one-time genesis ceremony (refuses to rerun; make clean first to redo)
 genesis:
