@@ -270,7 +270,10 @@ devnet is the local harness that validates that operational approach.
   share one slashing db - db locking makes sure a key signs only once.
 - metrics on for every component, http allowlists closed by default.
 
-## Quickstart (holesky)
+## Running the components on a public network (holesky)
+
+The devnet above is the self-contained local scenario. This section is about
+running the shared component composes against a public testnet instead:
 
 ```bash
 # per component: copy env template and review
