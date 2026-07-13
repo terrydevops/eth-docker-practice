@@ -228,9 +228,9 @@ Design points:
 
 ## Origin: holesky and mainnet
 
-The component composes predate the devnet - they ran besu+teku+
-teku-validator+web3signer against holesky and mainnet, and the devnet was
-built on top of them. To run against a public network:
+The component composes predate the devnet: the besu + teku +
+teku-validator + web3signer stack ran against holesky and mainnet, and the
+devnet was built on top of it. To run against a public network:
 
 ```bash
 # per component: copy env template and review
