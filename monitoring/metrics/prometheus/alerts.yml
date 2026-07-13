@@ -7,7 +7,7 @@ groups:
   - name: machine
     rules:
       # the way archive nodes actually die: disk full. alert on projected
-      # days-to-full, not a static percentage (see docs §3 Monitoring)
+      # days-to-full, not a static percentage (see the README, Operations plan)
       - alert: HostDiskWillFillSoon
         expr: >
           predict_linear(node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"}[6h],

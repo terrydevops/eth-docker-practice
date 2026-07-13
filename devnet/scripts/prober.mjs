@@ -1,5 +1,5 @@
 // synthetic prober for the archive rpc gateway. emits the SLIs defined in
-// docs/archive-node-operations.md §4 in prometheus exposition format on
+// the README's SRE perspective section, in prometheus exposition format on
 // :9600/metrics:
 //   - availability + latency per method class (point reads vs traces),
 //     measured through the gateway at random historical heights
