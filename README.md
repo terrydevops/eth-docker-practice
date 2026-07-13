@@ -105,7 +105,11 @@ line:
 - Grafana: http://localhost:3001 (anonymous viewer). Folders: **Clients**
   (official Besu/Geth/Teku/Lighthouse dashboards), **Devnet** (archive +
   validator), **Machine**, **Containers**, **Logs**.
-- Prometheus: http://localhost:9091
+- Prometheus: http://localhost:9091 - alert states under
+  http://localhost:9091/alerts. There is no alertmanager here: the devnet
+  has nobody to notify, so Prometheus evaluates the rules and the severity
+  labels (page/ticket) document the intended routing. In production the same
+  rules would route through alertmanager to a paging service.
 - Loki has no host port; Grafana reads it over the internal network.
   Promtail is scoped to this stack's network, so it does not ingest
   unrelated containers on a shared host.
