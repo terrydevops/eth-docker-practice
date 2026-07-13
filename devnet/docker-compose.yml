@@ -3,9 +3,10 @@
 #   pair A (validating): besu + teku (64 interop validators in-process)
 #   pair B (archive):    geth --gcmode=archive + lighthouse
 #
-# pairs peer over EL p2p (besu is the bootnode) and CL p2p (teku ENR fetched
-# at runtime by a curl sidecar). client diversity across pairs is deliberate:
-# a consensus bug in one client cannot take out both. see docs/operations.md
+# pairs peer over EL p2p (besu is the bootnode) and CL p2p (teku static-dials
+# lighthouse's pre-generated identity and keeps retrying; the ENR sidecar is
+# the secondary path). client diversity across pairs is deliberate: a
+# consensus bug in one client cannot take out both.
 #
 # ports: besu rpc :8545 | archive rpc :8547 | archive gateway :8548 | teku rest :5051
 
