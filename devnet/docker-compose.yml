@@ -67,6 +67,7 @@ services:
       - --rest-api-interface=0.0.0.0
       - --rest-api-host-allowlist=*
       - --p2p-port=9000
+      - --p2p-static-peers=${LIGHTHOUSE_MULTIADDR}
       - --metrics-enabled=true
       - --metrics-interface=0.0.0.0
       - --metrics-host-allowlist=*
@@ -158,10 +159,11 @@ services:
       - >
         until [ -s /shared/multiaddr.txt ]; do sleep 2; done;
         sleep 10;
+        mkdir -p /data/beacon/network;
+        cp -f /config/lighthouse-node.key /data/beacon/network/key;
         exec lighthouse bn
         --testnet-dir=/config
-        --boot-nodes="$(cat /shared/enr.txt)"
-        --libp2p-addresses="$(cat /shared/multiaddr.txt)"
+        --boot-nodes="$(cat /shared/enr.txt),$(cat /shared/multiaddr.txt)"
         --trusted-peers="$(sed 's|.*/p2p/||' /shared/multiaddr.txt)"
         --execution-endpoint=http://geth:8551
         --execution-jwt=/jwt/pair-b.hex
