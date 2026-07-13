@@ -102,17 +102,13 @@ line:
 | container | cAdvisor | per-container cpu / memory / network |
 | logs | Loki + Promtail | every container's stdout/stderr, searchable in Grafana |
 
-- Grafana: http://localhost:3001 (anonymous viewer). Folders: **Clients**
-  (official Besu/Geth/Teku/Lighthouse dashboards), **Devnet** (archive +
-  validator), **Machine**, **Containers**, **Logs**.
-- Prometheus: http://localhost:9091 - alert states under
-  http://localhost:9091/alerts. There is no alertmanager here: the devnet
-  has nobody to notify, so Prometheus evaluates the rules and the severity
-  labels (page/ticket) document the intended routing. In production the same
-  rules would route through alertmanager to a paging service.
-- Loki has no host port; Grafana reads it over the internal network.
-  Promtail is scoped to this stack's network, so it does not ingest
-  unrelated containers on a shared host.
+- Grafana: http://localhost:3001 (anonymous viewer; folders: Clients,
+  Devnet, Machine, Containers, Logs)
+- Prometheus: http://localhost:9091, alert states at /alerts. No
+  alertmanager: the devnet has nobody to notify - severity labels
+  (page/ticket) document the intended production routing.
+- Loki has no host port; Grafana reads it internally. Promtail is scoped to
+  this stack's network, so it ignores unrelated containers.
 
 ![Validator client dashboard](docs/images/validator-dashboard.png)
 *64 validators attesting and proposing; inclusion distance 1.0.*
@@ -228,25 +224,10 @@ The SLIs are split by method class on purpose: a single blended latency number l
 
 **What pages an on-call engineer.** (1) Serving-set unavailability or gateway fast-burn (availability SLO in danger *now*); (2) tip lag breaching freshness SLO across >=2 replicas simultaneously (common-cause: CL, engine, or upstream network issue); (3) correctness probe divergence  -  immediate page, remove replica from LB; (4) disk projected-to-full < 7 days on any serving replica; (5) golden-snapshot restore validation failure (our rollback floor is gone  -  that's an incident even though users see nothing). Everything else is a ticket, not a page: single-replica loss, slow-burn latency drift, one failed scrape.
 
-**What this repo implements today.** The SLO/paging model above is production-scale; the harness implements a working subset against the live devnet across four observability layers, so the reasoning is demonstrated, not just described. The layers map onto the SLIs and the operations-plan signal set:
-
-| Layer | Tooling in this repo | SLI / SRE concept it grounds |
-|---|---|---|
-| Serving (gateway) | haproxy in front of the archive node (`:8548`), method-class routing: `debug_`/`trace_` to a concurrency-capped heavy pool; health check is a real JSON-RPC call | The SLO measurement point; heavy-pool isolation from the production architecture |
-| SLIs (prober) | synthetic prober through the gateway: point reads + traces at random historical heights -> latency histograms per class; cross-client block-hash diff + genesis-balance invariant | **Availability SLI**, **latency SLIs**, **correctness probe** |
-| SLO (rules) | recording rules compute availability ratio + error-budget burn; multi-window multi-burn-rate alerts (fast 14.4x pages, slow 6x tickets), p95 breach, divergence pages immediately | Error budget policy as executable code (`slo-rules.yml`) |
-| Chain (business) | Prometheus scrapes besu / teku / geth / lighthouse / validator; 3 archive alerts | **Freshness SLI** (tip-lag) and serving-availability paging |
-| Machine (host) | node-exporter -> `Machine` dashboard | Disk usage / growth / days-to-full, IOPS, memory  -  "the way archive nodes actually die" |
-| Container | cAdvisor -> `Containers` dashboard | Per-process cpu / memory / restarts  -  fleet hygiene |
-| Logs | Loki + Promtail -> `Logs` dashboard | Incident-response evidence: searchable per-service error/warn stream |
-
-The paging rules are wired as Prometheus alerts and map directly to the SRE concepts above:
-
-| SRE concept | Implemented alert |
-|---|---|
-| Freshness SLO / tip-lag paging | `ArchiveNodeLagging`: `(sum(ethereum_blockchain_height) - sum(chain_head_block)) > 5` for 30s |
-| Serving-set unavailability paging | `ArchiveNodeDown`: `up{job="geth"} == 0` for 30s |
-| Chain-not-advancing (whole-network stall) | `ChainStalled`: `increase(ethereum_blockchain_height[2m]) == 0` |
+**What this repo implements today.** All four SLIs, the burn-rate paging
+and the correctness probe run in the devnet above - the gateway is the
+measurement point, the prober emits the SLIs, `slo-rules.yml` is the error
+budget policy as code (see the Monitoring and gateway sections).
 
 The SLO loop is verified end to end: stopping the archive node ejects it from the gateway (503s), availability drops, `RpcAvailabilityFastBurn` fires within minutes, and restarting the node clears it. **Honest scope:** all four SLIs (availability, both latency classes, freshness) and the burn-rate paging policy are grounded locally against synthetic traffic. What remains production-scale by nature: real user traffic (synthetic probes bound the floor, not the shape, of latency), N>=3 replica failover (the local gateway fronts one archive node  -  it demonstrates ejection, not rerouting), the *multi-replica* correctness diff (approximated here cross-client, geth vs besu), and snapshot-restore validation. Designed above, called out here rather than quietly implied.
 
@@ -256,30 +237,6 @@ Client compose files live at the top level and are shared. Each environment
 directory picks components via `COMPOSE_FILE` in its `.env` and holds that
 network's config. All images are pinned.
 
-```mermaid
-flowchart TB
-  subgraph ENV["environments - each picks components via COMPOSE_FILE"]
-    HOLESKY[holesky-network]
-    MAINNET[mainnet]
-    DEVNET["devnet - local PoS net + archive node + rpc gateway/SLO"]
-  end
-  subgraph CLIENTS["shared client composes"]
-    EL["EL: besu / geth"] <-->|engine api| CL["CL: teku / lighthouse"]
-    CL <-->|beacon rest| VC["VC: teku-validator"]
-    VC -->|remote signing| WS["web3signer + postgres slashing db"]
-    CL --- MEV[mev-boost]
-  end
-  subgraph OBS["monitoring - shared observability"]
-    PROM["metrics: prometheus + node-exporter + cadvisor"] --> GRAF[grafana]
-    LOKI["logs: loki + promtail"] --> GRAF
-  end
-  HOLESKY --> CLIENTS
-  MAINNET --> CLIENTS
-  DEVNET --> CLIENTS
-  HOLESKY --> OBS
-  MAINNET --> OBS
-  DEVNET --> OBS
-```
 
 | dir | what |
 |---|---|
