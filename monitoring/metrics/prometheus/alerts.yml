@@ -88,7 +88,7 @@ groups:
       # any other node process down. pages faster than the symptom alerts
       # below it: a dead validator client stalls the chain ~2 minutes later
       - alert: NodeDown
-        expr: up{job=~"besu|teku|lighthouse|prysm-validator"} == 0
+        expr: up{job=~"besu|teku|lighthouse|prysm-validator|remote-vc|web3signer"} == 0
         for: 1m
         labels:
           severity: page
@@ -127,6 +127,80 @@ groups:
           severity: ticket
         annotations:
           summary: "finalized epoch has not advanced in 15 minutes"
+
+  # ---- remote signing: web3signer + the teku VC on the archive pair --------
+  - name: remote-signing
+    rules:
+      # a prevented signing means something ASKED to double-sign - almost
+      # always two VCs loaded with the same keys. the protection worked, but
+      # the misconfiguration must be found before someone runs a VC without it
+      - alert: SlashingProtectionTriggered
+        expr: increase(eth2_slashingprotection_prevented_signings_total[5m]) > 0
+        labels:
+          severity: page
+        annotations:
+          summary: "web3signer refused a signature: a double-sign was attempted"
+
+      # duties are due every epoch; a slow signer starts missing slots well
+      # before it is actually down
+      - alert: SigningLatencyHigh
+        expr: >
+          rate(signing_bls_signing_duration_sum[5m])
+          / rate(signing_bls_signing_duration_count[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "web3signer BLS signing p_avg above 500ms"
+
+      # the remote VC's only view of the chain is lighthouse's event stream;
+      # flapping here silently degrades duties before anything is "down"
+      - alert: RemoteVcEventStreamFlapping
+        expr: increase(validator_event_stream_disconnections_total{job="remote-vc"}[10m]) > 3
+        labels:
+          severity: ticket
+        annotations:
+          summary: "remote VC keeps losing the beacon node event stream"
+
+      # pair-B twin of AttestationsStalling: teku's VC does not export
+      # validator_last_attested_slot, so watch performed duties instead.
+      # attestation duty comes every epoch (~3.2min) - 15m of silence while
+      # the signer holds active keys means duties are being missed
+      - alert: RemoteVcDutiesStalled
+        expr: >
+          sum(increase(validator_duties_performed_total{job="remote-vc"}[15m])) == 0
+          and
+          signing_signers_loaded_count > 0
+        labels:
+          severity: page
+        annotations:
+          summary: "remote VC performed no duties in 15 minutes"
+
+  # ---- per-validator view, from lighthouse --validator-monitor-auto -------
+  # the SLO alerts catch aggregate effectiveness; these name the individual
+  # validator, which is what an operator actually needs to act on
+  - name: validator-monitor
+    rules:
+      # inclusion distance drives the reward multiplier: an attestation
+      # included 2+ slots late earns materially less than one included next
+      # slot. degrades long before anything looks "down"
+      - alert: ValidatorAttestationInclusionSlow
+        expr: avg_over_time(validator_monitor_attestation_in_block_delay_slots{validator!="total"}[15m]) > 2
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "validator {{ $labels.validator }} attestations included >2 slots late"
+
+      # balance going down over an hour means penalties exceed rewards:
+      # the validator is missing duties, not just earning slowly
+      - alert: ValidatorBalanceDecreasing
+        expr: delta(validator_monitor_balance_gwei{validator!="total"}[1h]) < 0
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "validator {{ $labels.validator }} balance decreased over the last hour"
 
   # ---- meta: the measurement pipeline itself ------------------------------
   - name: monitoring-meta

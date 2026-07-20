@@ -1,0 +1,124 @@
+{
+  "uid": "devnet-remote-signing",
+  "title": "Devnet - Remote Signing (web3signer + teku VC)",
+  "tags": ["devnet", "staking"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    { "type": "row", "title": "Health", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": [] },
+    {
+      "type": "stat", "title": "web3signer up",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "up{job=\"web3signer\"}" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "remote-vc up",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "up{job=\"remote-vc\"}" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "keys loaded in signer",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "signing_signers_loaded_count" }]
+    },
+    {
+      "type": "stat", "title": "signings prevented (slashing protection)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "eth2_slashingprotection_prevented_signings_total" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat", "title": "VC current epoch",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "validator_current_epoch{job=\"remote-vc\"}" }]
+    },
+    { "type": "row", "title": "Signing activity", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }, "panels": [] },
+    {
+      "type": "timeseries", "title": "BLS signings / min",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(signing_bls_signing_duration_count[5m]) * 60", "legendFormat": "signings/min" }]
+    },
+    {
+      "type": "timeseries", "title": "signing latency (avg, s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(signing_bls_signing_duration_sum[5m]) / rate(signing_bls_signing_duration_count[5m])", "legendFormat": "avg latency" }]
+    },
+    {
+      "type": "timeseries", "title": "slashing protection verdicts / min",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(eth2_slashingprotection_permitted_signings_total[5m]) * 60", "legendFormat": "permitted" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(eth2_slashingprotection_prevented_signings_total[5m]) * 60", "legendFormat": "prevented" }
+      ]
+    },
+    { "type": "row", "title": "VC duties", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "panels": [] },
+    {
+      "type": "timeseries", "title": "duties performed / min (by type)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (type) (rate(validator_duties_performed_total{job=\"remote-vc\"}[5m])) * 60", "legendFormat": "{{type}}" }]
+    },
+    {
+      "type": "timeseries", "title": "beacon node API requests / min",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (method) (rate(validator_beacon_node_requests_total{job=\"remote-vc\"}[5m])) * 60", "legendFormat": "{{method}}" }]
+    },
+    { "type": "row", "title": "Chain view", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }, "panels": [] },
+    {
+      "type": "stat", "title": "active validators (chain-wide)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 24 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "max(beacon_current_active_validators{job=~\"teku|lighthouse\"})" }]
+    },
+    {
+      "type": "timeseries", "title": "finalized epoch",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 9, "x": 6, "y": 24 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "max(beacon_finalized_epoch{job=~\"teku|lighthouse\"})", "legendFormat": "finalized epoch" }]
+    },
+    {
+      "type": "timeseries", "title": "active validators over time",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 9, "x": 15, "y": 24 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "max(beacon_current_active_validators{job=~\"teku|lighthouse\"})", "legendFormat": "active validators" }]
+    },
+    { "type": "row", "title": "Staking SLO (effectiveness >= 99%)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 }, "panels": [] },
+    {
+      "type": "stat", "title": "attestation effectiveness (prev epoch)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 30 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:staking_participation:ratio" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.95 }, { "color": "green", "value": 0.99 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "timeseries", "title": "effectiveness burn rate (1.0 = on budget)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 30 },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:staking_effectiveness_burn:rate5m", "legendFormat": "5m" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:staking_effectiveness_burn:rate1h", "legendFormat": "1h" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:staking_effectiveness_burn:rate6h", "legendFormat": "6h" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "remote VC duty failure ratio (30m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 30 },
+      "targets": [{ "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "slo:remote_vc_duty_failure:ratio_rate30m", "legendFormat": "failure ratio" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] }
+    }
+  ]
+}
