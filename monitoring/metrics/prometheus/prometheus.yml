@@ -6,6 +6,11 @@ rule_files:
   - /etc/prometheus/alerts.yml
   - /etc/prometheus/slo-rules.yml
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 scrape_configs:
   - job_name: besu
     metrics_path: /metrics
@@ -38,6 +43,28 @@ scrape_configs:
   - job_name: cadvisor
     static_configs:
       - targets: ['cadvisor:8080']
+  # the monitoring stack watching itself: a collector that stops collecting,
+  # a rule engine that falls behind, or a delivery path that goes quiet are
+  # all silent failures otherwise
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+  - job_name: alertmanager
+    static_configs:
+      - targets: ['alertmanager:9093']
+  - job_name: alert-sink
+    static_configs:
+      - targets: ['alert-sink:9099']
+  - job_name: grafana
+    static_configs:
+      - targets: ['grafana:3000']
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:3100']
+  - job_name: promtail
+    static_configs:
+      - targets: ['promtail:9080']
+
   # rpc gateway (SLO measurement point) + synthetic prober
   - job_name: gateway
     static_configs:

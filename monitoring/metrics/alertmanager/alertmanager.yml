@@ -1,0 +1,64 @@
+# Alert routing for the devnet stack.
+#
+# Delivery is a local webhook sink by default: this is a practice devnet, and
+# a receiver that is always reachable makes the routing itself observable
+# (amtool, the alertmanager UI, and the notifications log all work) without
+# depending on a real chat workspace. Point `slack_api_url` at a webhook and
+# swap the receiver to ship somewhere real.
+
+global:
+  resolve_timeout: 5m
+
+route:
+  # group by the alert and what it is about, so one broken node produces one
+  # notification rather than one per rule that noticed
+  group_by: ['alertname', 'job']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: default
+
+  routes:
+    # pages are the ones worth interrupting someone for: notify fast and
+    # keep reminding while they are open
+    - matchers:
+        - severity = "page"
+      receiver: page
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # tickets can wait for working hours; batch them up
+    - matchers:
+        - severity = "ticket"
+      receiver: ticket
+      group_wait: 5m
+      repeat_interval: 24h
+
+inhibit_rules:
+  # a node that is down will also stop attesting, stall its head, and fail
+  # its probes. page for the cause, stay quiet about the symptoms
+  - source_matchers:
+      - alertname = "NodeDown"
+    target_matchers:
+      - severity =~ "page|ticket"
+    equal: ['job']
+
+  # while the chain is stalled every staking and rpc symptom is downstream
+  - source_matchers:
+      - alertname = "ChainStalled"
+    target_matchers:
+      - alertname =~ "AttestationsStalling|RemoteVcDutiesStalled|StakingEffectiveness.*"
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: http://alert-sink:9099/alerts
+        send_resolved: true
+  - name: page
+    webhook_configs:
+      - url: http://alert-sink:9099/alerts?severity=page
+        send_resolved: true
+  - name: ticket
+    webhook_configs:
+      - url: http://alert-sink:9099/alerts?severity=ticket
+        send_resolved: true

@@ -205,6 +205,42 @@ groups:
   # ---- meta: the measurement pipeline itself ------------------------------
   - name: monitoring-meta
     rules:
+      # the delivery path. an alertmanager that is down means every other
+      # alert in this file is firing into nothing - this one is the reason
+      # the rest can be trusted
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "alertmanager is down - alerts are not being delivered"
+
+      # prometheus dropping its own scrapes, or falling behind on rules,
+      # degrades every signal here before anything looks broken
+      - alert: PrometheusRuleEvaluationFailing
+        expr: increase(prometheus_rule_evaluation_failures_total[10m]) > 0
+        labels:
+          severity: ticket
+        annotations:
+          summary: "prometheus failed to evaluate rules in the last 10 minutes"
+
+      - alert: PrometheusTargetScrapesFailing
+        expr: increase(prometheus_target_scrapes_sample_out_of_order_total[10m]) > 0
+          or increase(prometheus_target_scrapes_exceeded_body_size_limit_total[10m]) > 0
+        labels:
+          severity: ticket
+        annotations:
+          summary: "prometheus is rejecting samples from a target"
+
+      # alertmanager accepted a notification but could not deliver it
+      - alert: AlertNotificationsFailing
+        expr: increase(alertmanager_notifications_failed_total[15m]) > 0
+        labels:
+          severity: page
+        annotations:
+          summary: "alertmanager failed to deliver notifications to {{ $labels.integration }}"
+
       # if the gateway or prober is gone the SLO is unmeasured - flying blind
       # is worse than a false page
       - alert: SloMeasurementBlind

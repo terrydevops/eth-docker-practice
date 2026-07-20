@@ -16,6 +16,32 @@ services:
       - ../monitoring/metrics/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - ../monitoring/metrics/prometheus/slo-rules.yml:/etc/prometheus/slo-rules.yml:ro
 
+  # alert delivery. without this the rules fire into the prometheus UI and
+  # nobody hears them - grouping, inhibition and severity routing live here
+  alertmanager:
+    image: "${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.28.1}"
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports: ["${ALERTMANAGER_PORT:-9093}:9093"]
+    volumes:
+      - ../monitoring/metrics/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    mem_limit: 128m
+
+  # stands in for slack/pagerduty on a devnet: logs every notification and
+  # counts them, so the delivery path itself is observable
+  alert-sink:
+    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    container_name: alert-sink
+    restart: unless-stopped
+    command: ["node", "/app/alert-sink.mjs"]
+    volumes:
+      - ../monitoring/metrics/alertmanager/alert-sink.mjs:/app/alert-sink.mjs:ro
+    mem_limit: 64m
+
   grafana:
     image: "${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
     container_name: grafana
@@ -92,4 +118,5 @@ services:
     mem_limit: 256m
 
 volumes:
+  alertmanager-data:
   loki-data:
