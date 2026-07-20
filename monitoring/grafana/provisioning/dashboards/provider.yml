@@ -25,3 +25,9 @@ providers:
     type: file
     options:
       path: /var/lib/grafana/dashboards/containers
+  # the monitoring stack watching itself
+  - name: monitoring-dashboards
+    folder: Monitoring
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/monitoring
