@@ -43,6 +43,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      # full category set so the production "Besu Full" dashboard has data
+      - --metrics-category=BLOCKCHAIN,ETHEREUM,EXECUTORS,JVM,NETWORK,PEERS,PROCESS,RPC,SYNCHRONIZER,TRANSACTION_POOL,KVSTORE_ROCKSDB,PRUNER,BLOCK_PROCESSING
     ports: ["8545:8545"]
     volumes:
       - besu-data:/data
@@ -168,6 +170,7 @@ services:
         --trusted-peers="$(sed 's|.*/p2p/||' /shared/multiaddr.txt)"
         --execution-endpoint=http://geth:8551
         --execution-jwt=/jwt/pair-b.hex
+        --validator-monitor-auto
         --datadir=/data
         --port=9000
         --disable-upnp
@@ -187,6 +190,34 @@ services:
     depends_on:
       - enr-sidecar
       - geth
+
+  # remote-signing VC on the archive pair: keys live in web3signer (separate
+  # compose project, same docker network), so the archive pair also stakes.
+  # contrast with prysm-validator on pair A, which signs locally.
+  remote-vc:
+    image: "${TEKU_IMAGE}"
+    container_name: remote-vc
+    user: "0:0"   # named volume is root-owned; devnet-only convenience
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    command:
+      - validator-client
+      - --log-destination=CONSOLE
+      - --data-base-path=/data
+      - --network=/config/cl-config.yaml
+      - --beacon-node-api-endpoint=http://lighthouse:5052
+      - --validators-external-signer-url=http://web3signer:9000
+      - --validators-external-signer-public-keys=external-signer
+      - --validators-proposer-default-fee-recipient=0x123463a4B065722E99115D6c222f267d9cABb524
+      - --metrics-enabled=true
+      - --metrics-interface=0.0.0.0
+      - --metrics-port=8008
+      - --metrics-host-allowlist=*
+    volumes:
+      - remote-vc-data:/data
+      - ./config:/config
+    depends_on:
+      - lighthouse
 
   # rpc gateway in front of the archive node: the SLO measurement point.
   # routes debug_/trace_ to a strictly-capped heavy pool, health-checks with
@@ -218,6 +249,7 @@ services:
 
 volumes:
   besu-data:
+  remote-vc-data:
   teku-vc-data:
   teku-data:
   geth-data:

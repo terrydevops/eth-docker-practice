@@ -1,0 +1,16 @@
+# devnet adaptation:
+#  - join the devnet docker network so the VC can reach us as "web3signer"
+#  - mount the devnet chain config; .env sets NETWORK to its mounted path so
+#    signing domains are computed for chain 32382, not a public network
+services:
+  web3signer:
+    container_name: web3signer
+    volumes:
+      - ../devnet/config:/config:ro
+
+networks:
+  default:
+    name: eth-devnet-network
+    external: true
+    ipam: !reset null
+    driver: !reset null
