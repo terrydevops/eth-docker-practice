@@ -26,6 +26,15 @@ services:
     container_name: besu
     environment:
       - BESU_OPTS=-Xmx1g
+    # besu advertises 127.0.0.1 to peers by default and --p2p-host only takes
+    # an address, not a name - so it advertises its own container IP, resolved
+    # at startup. without this geth connects once from the enode in .env and
+    # never reconnects after a restart, because rediscovery hands it localhost.
+    entrypoint:
+      - sh
+      - -c
+      - exec /opt/besu/bin/besu --p2p-host="$$(hostname -i | tr -d ' ')" "$$@"
+      - besu
     command:
       - --data-path=/data
       - --genesis-file=/config/besu-genesis.json
@@ -109,6 +118,28 @@ services:
   geth:
     image: "${GETH_IMAGE}"
     container_name: geth
+    environment:
+      - BESU_ENODE=${BESU_ENODE}
+    # two devnet-specific fixes before geth starts:
+    #  --nat extip: without it geth advertises 127.0.0.1 and besu drops a peer
+    #    announcing a loopback endpoint.
+    #  admin_addPeer: --bootnodes only seeds discovery, and on a two-node
+    #    network discovery has nobody to gossip with, so geth never dials.
+    #    static-nodes.json is gone in this version, so register over IPC once
+    #    the node is up - geth keeps a static peer redialled from then on.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        (
+          peer=$$(echo "$$BESU_ENODE" | sed "s/@besu:/@$$(getent hosts besu | awk '{print $$1}'):/")
+          until geth attach --exec "admin.addPeer(\"$$peer\")" /data/geth.ipc 2>/dev/null | grep -q true; do
+            sleep 5
+          done
+          echo "static peer registered: besu"
+        ) &
+        exec geth --nat="extip:$$(hostname -i | tr -d ' ')" "$$@"
+      - geth
     command:
       - --datadir=/data
       - --networkid=32382
