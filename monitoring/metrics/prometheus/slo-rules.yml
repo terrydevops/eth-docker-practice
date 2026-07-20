@@ -39,6 +39,81 @@ groups:
       - record: slo:rpc_error_budget_burn:rate6h
         expr: (1 - slo:rpc_availability:ratio_rate6h) / (1 - 0.999)
 
+  # ---- staking SLO: attestation effectiveness >= 99% -----------------------
+  # SLI 1 (source of truth): the chain's own participation accounting -
+  # gwei that attested to the correct target last epoch over active gwei.
+  # covers ALL validators (both VCs) and counts inclusion, not just submission.
+  # SLI 2 (per-component): the remote VC's own duty success ratio, to tell
+  # "our signer path is failing" apart from "the other pair is failing".
+  - name: slo-staking-recording
+    interval: 15s
+    rules:
+      - record: slo:staking_participation:ratio
+        expr: >
+          beacon_participation_prev_epoch_target_attesting_gwei_total
+          /
+          beacon_participation_current_epoch_active_gwei_total
+      - record: slo:staking_participation:ratio_avg5m
+        expr: avg_over_time(slo:staking_participation:ratio[5m])
+      - record: slo:staking_participation:ratio_avg30m
+        expr: avg_over_time(slo:staking_participation:ratio[30m])
+      - record: slo:staking_participation:ratio_avg1h
+        expr: avg_over_time(slo:staking_participation:ratio[1h])
+      - record: slo:staking_participation:ratio_avg6h
+        expr: avg_over_time(slo:staking_participation:ratio[6h])
+      # burn rate against the 1% error budget of a 99% target
+      - record: slo:staking_effectiveness_burn:rate5m
+        expr: (1 - slo:staking_participation:ratio_avg5m) / (1 - 0.99)
+      - record: slo:staking_effectiveness_burn:rate30m
+        expr: (1 - slo:staking_participation:ratio_avg30m) / (1 - 0.99)
+      - record: slo:staking_effectiveness_burn:rate1h
+        expr: (1 - slo:staking_participation:ratio_avg1h) / (1 - 0.99)
+      - record: slo:staking_effectiveness_burn:rate6h
+        expr: (1 - slo:staking_participation:ratio_avg6h) / (1 - 0.99)
+      - record: slo:remote_vc_duty_failure:ratio_rate30m
+        expr: >
+          sum(rate(validator_duties_performed_total{job="remote-vc",result="failed"}[30m]))
+          /
+          sum(rate(validator_duties_performed_total{job="remote-vc"}[30m]))
+
+  - name: slo-staking-alerts
+    rules:
+      # page: missing >14.4x the effectiveness budget on two windows.
+      # at 66 validators a single validator silent for one epoch is ~1.5%
+      # missed (1.5x burn) - this only fires for systemic misses
+      - alert: StakingEffectivenessFastBurn
+        expr: >
+          slo:staking_effectiveness_burn:rate5m > 14.4
+          and
+          slo:staking_effectiveness_burn:rate1h > 14.4
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "attestation effectiveness fast burn (>14.4x budget of 99% SLO)"
+      - alert: StakingEffectivenessSlowBurn
+        expr: >
+          slo:staking_effectiveness_burn:rate30m > 6
+          and
+          slo:staking_effectiveness_burn:rate6h > 6
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "attestation effectiveness slow burn (>6x budget of 99% SLO)"
+      # per-component attribution: the remote signer path specifically is
+      # failing duties, regardless of what chain-wide participation says
+      - alert: RemoteVcDutyFailureRatioHigh
+        expr: >
+          slo:remote_vc_duty_failure:ratio_rate30m > 0.01
+          and
+          sum(rate(validator_duties_performed_total{job="remote-vc"}[30m])) > 0
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "remote VC duty failure ratio above 1% over 30m"
+
   - name: slo-archive-rpc-alerts
     rules:
       # page: burning >14.4x budget, confirmed on two windows -> at this rate
