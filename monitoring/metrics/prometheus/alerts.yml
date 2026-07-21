@@ -128,6 +128,60 @@ groups:
         annotations:
           summary: "finalized epoch has not advanced in 15 minutes"
 
+  # ---- besu, the java execution client ------------------------------------
+  # the generic NodeDown/ChainStalled rules cover "besu is gone" and "the
+  # whole chain stopped". these cover the ways besu degrades while still up:
+  # it falls behind, loses its peers, or its JVM starts thrashing.
+  - name: besu
+    rules:
+      # besu reports its own sync state as a boolean. a node that is up but
+      # not in sync is serving stale answers and, if it stakes, building on
+      # the wrong head. gate on the chain having peers so this does not fire
+      # during the first seconds after a restart.
+      - alert: BesuNotInSync
+        expr: besu_synchronizer_in_sync == 0
+        for: 3m
+        labels:
+          severity: page
+        annotations:
+          summary: "besu is up but not in sync with the chain head"
+
+      # the execution-layer peer count going to zero is the failure we already
+      # hit once: blocks keep arriving over the engine API so the node looks
+      # healthy, while transaction gossip is dead. current-peers, not the
+      # connected_total counter, which only ever increases.
+      - alert: BesuNoPeers
+        expr: sum(besu_peers_peer_count_by_client{job="besu"}) == 0
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "besu has no execution-layer peers - tx gossip is isolated"
+
+      # besu is a JVM client, and GC pauses are its characteristic way of
+      # missing slot deadlines: it is technically up while stop-the-world
+      # pauses make it skip block production or attestation windows. alert on
+      # time spent in GC per second - above ~10% means real pause pressure.
+      - alert: BesuGcPressure
+        expr: sum(rate(jvm_gc_collection_seconds_sum{job="besu"}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "besu JVM spends >10% of wall-clock in garbage collection"
+
+      # heap approaching the -Xmx ceiling is what precedes GC thrashing and
+      # eventually an OOM kill (which presents as an unexplained restart).
+      - alert: BesuHeapHigh
+        expr: >
+          sum(jvm_memory_used_bytes{job="besu",area="heap"})
+          / sum(jvm_memory_max_bytes{job="besu",area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "besu JVM heap above 90% of its -Xmx ceiling"
+
   # ---- remote signing: web3signer + the teku VC on the archive pair --------
   - name: remote-signing
     rules:
