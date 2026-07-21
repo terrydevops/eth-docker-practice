@@ -1,38 +1,36 @@
 # eth-docker-practice
 
-A local Ethereum PoS network with an archive node, four-layer observability
-and an implemented SLO. Built from reusable per-client compose files that
-also run against holesky and mainnet (last section).
+A local Ethereum PoS network with an archive node, live on-chain staking
+through a remote signer, five-layer observability and three SLOs. Built from
+reusable per-client compose files that also run against holesky and mainnet
+(last section).
 
 ## Local PoS network + archive node (devnet/)
 
 A self-contained network for testing operations against a chain you fully
 control - no checkpoint sync, no public testnet, blocks in seconds. Two
-client-diverse pairs:
+client-diverse pairs, a remote-signing plane and a monitoring plane:
 
-```
-validating pair                       archive pair
-+------------------+                  +-------------------+
-| besu (EL)  :8545 |  <-- EL p2p -->  | geth (EL)  :8547  |
-| teku (CL)  :5051 |  <-- CL p2p -->  | lighthouse (CL)   |
-| prysm vc, 64 val |                  |  --gcmode=archive |
-+------------------+                  +---------+---------+
-  produces blocks                               |
-                                      gateway (haproxy) :8548
-                                      point pool | heavy pool
-                                                ^
-                                      prober: SLIs -> prometheus
+![Architecture](docs/images/architecture.png)
+*Teal = built and running; dashed = the production design not yet
+implemented (edge tier, HA replicas, snapshot recovery). The five layers,
+top to bottom: edge, gateway, node pairs, remote signing, data lifecycle -
+with the monitoring plane alongside.*
 
-observability (shared): prometheus + node-exporter + cadvisor + loki/promtail
-                        -> grafana :3001 (10 dashboards, 19 alerts)
-```
+The validating pair produces blocks with 64 interop validators signing
+locally. The archive pair both serves historical state and stakes: two
+validators added on-chain through the predeployed deposit contract, their
+keys held by web3signer and driven by a teku validator client in
+remote-signing mode. So the two pairs also demonstrate the two key-custody
+models side by side - local keys vs a remote signer with a slashing-
+protection database.
 
-The validating pair produces blocks; the archive pair follows and keeps all
-historical state. Archive queries are served through the gateway on 8548
-(raw node RPC stays on 8547 for debugging). Client diversity across the
-pairs is deliberate: a consensus bug in one client cannot take out both.
+Archive queries are served through the gateway on 8548 (raw node RPC stays on
+8547 for debugging). Client diversity across the pairs is deliberate: a
+consensus bug in one client cannot take out both, and each client gets alerts
+tuned to its own runtime (JVM GC for besu/teku, goroutines for geth).
 
-The full stack is ~18 containers; plan for **8GB RAM and 4+ cores**.
+The full stack is ~20 containers; plan for **8GB RAM and 4+ cores**.
 
 ### Run
 
@@ -92,23 +90,37 @@ requests, error semantics.
 
 ### Monitoring
 
-Four layers, so a problem can be traced from the host down to a single log
-line:
+Five layers, so a problem can be traced from the host down to a single log
+line - and the fifth layer is the monitoring watching itself:
 
 | layer | collector | what |
 |---|---|---|
-| chain | Prometheus | besu, teku, geth, lighthouse, prysm-validator + archive alerts |
+| chain | Prometheus | besu, teku, geth, lighthouse, prysm-validator, remote-vc, web3signer |
 | machine | node-exporter | host cpu, memory, disk, filesystem, network |
 | container | cAdvisor | per-container cpu / memory / network |
 | logs | Loki + Promtail | every container's stdout/stderr, searchable in Grafana |
+| meta | Prometheus | prometheus, alertmanager, grafana, loki, promtail scrape themselves |
 
 - Grafana: http://localhost:3001 (anonymous viewer; folders: Clients,
-  Devnet, Machine, Containers, Logs)
-- Prometheus: http://localhost:9091, alert states at /alerts. No
-  alertmanager: the devnet has nobody to notify - severity labels
-  (page/ticket) document the intended production routing.
+  Clients/Lighthouse, Devnet, Machine, Containers, Monitoring, Logs). ~30
+  dashboards - the upstream client boards (Besu Full, Teku Detailed,
+  sigp's lighthouse set, Node Exporter Full, cAdvisor) plus custom devnet
+  boards: per-pair API surfaces, EL comparison, remote signing, lighthouse
+  finality, and the SLO board.
+- Prometheus: http://localhost:9091, alert states at /alerts.
+- Alertmanager: http://localhost:9093 routes by severity - `page` notifies
+  in 10s and repeats hourly, `ticket` batches for working hours - with
+  inhibition so a down node's downstream symptoms stay quiet. Delivery lands
+  in a local webhook sink (a real workspace is one config line away); the
+  sink exports counters so the delivery path itself is alertable.
 - Loki has no host port; Grafana reads it internally. Promtail is scoped to
   this stack's network, so it ignores unrelated containers.
+
+Each client gets alerts tuned to its own runtime rather than one generic
+template: JVM heap and GC pauses for the Java clients (besu, teku),
+goroutine leaks and scheduler latency for the Go client (geth), engine-API
+errors for the CL->EL link, and the slashing-protection counter for the
+remote signer (must be zero, forever).
 
 ![Validator client dashboard](docs/images/validator-dashboard.png)
 *64 validators attesting and proposing; inclusion distance 1.0.*
@@ -134,21 +146,43 @@ measured at the gateway, not at the node:
   alerts - fast burn (>14.4x on 5m and 1h) pages, slow burn tickets, p95
   breaches ticket, correctness divergence pages immediately.
 
+Three SLOs in all, one external and two internal, kept distinct on the SLO
+board and in `docs/archive-rpc-slo.md`:
+
+| SLO | scope | target |
+|---|---|---|
+| **Archive RPC** | external service contract | availability >= 99.9%, point p95 <= 300ms, trace p95 <= 10s |
+| **Engine API** (per pair) | internal CL<->EL link | >= 99.9% of every-slot engine calls succeed |
+| **Staking effectiveness** | internal production quality | attestation effectiveness >= 99% |
+
+Only the archive RPC surface is an outside promise, so only it is a true
+service contract; the other two are internal-dependency and production SLOs.
+The two pairs report the engine SLI under different metric names (teku's
+`outcome=success` vs lighthouse's payload `status=valid`) - client
+diversity showing up in the metrics themselves.
+
 Alerting keeps the same layer split, severity `page` = wake someone,
 `ticket` = working hours:
 
-| layer | alerts |
+| group | alerts |
 |---|---|
-| machine | HostDiskWillFillSoon (projected full <7d, page), HostDiskSpaceLow (page), HostOutOfMemory, HostHighCpu |
+| machine | HostDiskWillFillSoon (projected full, page), HostDiskSpaceLow (page), HostOutOfMemory, HostHighCpu |
 | containers | ContainerOomKilled, ContainerMemoryNearLimit |
 | chain | ArchiveNodeLagging (page), ArchiveNodeDown (page), NodeDown (page), ChainStalled (page), AttestationsStalling (page), FinalityStalled |
-| slo | RpcAvailabilityFastBurn (page), SlowBurn, point/trace p95 breach, RpcCorrectnessDivergence (page) |
-| meta | SloMeasurementBlind (prober/gateway down = flying blind), CollectorDown |
+| besu | BesuNotInSync (page), BesuNoPeers, BesuGcPressure, BesuHeapHigh |
+| geth | GethExecutionFallingBehind (page), GethFinalityNotAdvancing (page), GethGoroutineLeak, GethSchedulerLatencyHigh |
+| teku | TekuEngineApiErrors (page), TekuEnginePayloadSlow, TekuGcPressure, TekuHeapHigh |
+| remote signing | SlashingProtectionTriggered (page), RemoteVcDutiesStalled (page), SigningLatencyHigh, RemoteVcEventStreamFlapping |
+| validator monitor | ValidatorAttestationInclusionSlow, ValidatorBalanceDecreasing |
+| slo: rpc | RpcAvailabilityFastBurn (page), SlowBurn, point/trace p95 breach, RpcCorrectnessDivergence (page) |
+| slo: engine/staking | EngineApiFastBurn (page, per pair), StakingEffectivenessFastBurn (page), SlowBurn |
+| meta | AlertmanagerDown (page), AlertNotificationsFailing (page), SloMeasurementBlind, CollectorDown, PrometheusRuleEvaluationFailing |
 
-Two drills, verified end to end: `docker compose stop geth` fires
-ArchiveNodeDown, then RpcAvailabilityFastBurn within ~3 minutes;
-`docker compose stop prysm-validator` fires ChainStalled ~2 minutes later
-(nobody signs proposals). Both clear on restart.
+Drills verified end to end: `docker compose stop geth` fires ArchiveNodeDown,
+then RpcAvailabilityFastBurn within ~3 minutes; `docker compose stop
+prysm-validator` fires ChainStalled ~2 minutes later (nobody signs
+proposals); a manual test alert routes through alertmanager to the sink in
+seconds. All clear on restart.
 
 ![Archive RPC SLO dashboard](docs/images/slo-dashboard.png)
 *Availability against the 99.9% objective, burn rate, correctness probes,
@@ -158,9 +192,11 @@ p95 per method class.*
 
 - geth is pinned with `--state.scheme=hash`: recent geth defaults to path
   storage, which does not support archive mode.
-- the validator client is prysm with built-in interop keys, for a
-  zero-config devnet. The production validator stack (teku-validator +
-  web3signer + slashing db) lives in the component directories.
+- the validating pair uses prysm with built-in interop keys, for a
+  zero-config start. The archive pair runs the production-shaped stack for
+  real: a teku validator client in remote-signing mode against web3signer
+  with a postgres slashing-protection database, staking two validators
+  added on-chain through the predeployed deposit contract.
 - genesis is a one-time ceremony, not part of `make up`: regenerating it on
   restart would silently fork the chain.
 
