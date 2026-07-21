@@ -182,6 +182,61 @@ groups:
         annotations:
           summary: "besu JVM heap above 90% of its -Xmx ceiling"
 
+  # ---- geth, the go execution client (archive node) -----------------------
+  # generic NodeDown/ArchiveNodeDown cover "geth is gone". these cover how a
+  # go client degrades while up: it stops keeping up with execution, its
+  # goroutines leak, or the CL stops feeding it finality. note these are the
+  # go-runtime failures - the JVM heap/GC alerts that besu needs do not apply.
+  - name: geth
+    rules:
+      # geth exposes head as three separate metrics: header downloaded, block
+      # executed, receipt written. in a healthy node they are equal. header
+      # running ahead of block means headers are arriving but execution is
+      # falling behind - the node is degrading before it looks "down".
+      - alert: GethExecutionFallingBehind
+        expr: (chain_head_header{job="geth"} - chain_head_block{job="geth"}) > 5
+        for: 3m
+        labels:
+          severity: page
+        annotations:
+          summary: "geth has downloaded headers it has not executed (>5 blocks behind)"
+
+      # the CL feeds finality over the engine API. if geth's finalized head
+      # stops advancing while the chain itself is fine, the engine-API link to
+      # lighthouse is the problem, not the chain. gated on finality existing.
+      - alert: GethFinalityNotAdvancing
+        expr: >
+          increase(chain_head_finalized{job="geth"}[15m]) == 0
+          and chain_head_finalized{job="geth"} > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "geth finalized head has not advanced in 15m - check the engine API to lighthouse"
+
+      # goroutines are go's concurrency units. a steadily climbing count is
+      # the classic go leak - some operation is blocking and never releasing.
+      # geth idles around ~130; a sustained climb past 2000 is pathological.
+      - alert: GethGoroutineLeak
+        expr: system_cpu_goroutines{job="geth"} > 2000
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "geth goroutine count above 2000 and sustained - possible leak"
+
+      # geth's scheduler latency rising means goroutines are waiting for CPU:
+      # the node is saturated and cannot keep up with block processing. this
+      # is geth's equivalent of besu's GC pressure - a different runtime, the
+      # same symptom of "up but too slow to meet deadlines".
+      - alert: GethSchedulerLatencyHigh
+        expr: rate(system_cpu_schedlatency{job="geth"}[5m]) > 1e8
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "geth scheduler latency climbing - CPU saturated, block processing may lag"
+
   # ---- remote signing: web3signer + the teku VC on the archive pair --------
   - name: remote-signing
     rules:
