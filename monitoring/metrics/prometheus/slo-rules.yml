@@ -5,6 +5,64 @@
 # pages, a slow burn tickets, and neither fires on a single blip.
 
 groups:
+  # ---- engine-API SLOs: the CL->EL link on each node pair -----------------
+  # the engine API is the command channel that keeps a pair's CL and EL in
+  # step; if it degrades, block validation and finality follow. SLO: 99.9%
+  # of every-slot engine calls succeed. the two pairs expose the SLI under
+  # different metric names (client diversity): the validating pair's teku
+  # reports outcome=success/error, the archive pair's lighthouse reports
+  # payload status=valid. same target, same burn-rate policy as the rpc SLO.
+  - name: slo-engine-api-recording
+    interval: 15s
+    rules:
+      # validating pair (teku -> besu)
+      - record: slo:engine_success:ratio_rate5m:validating
+        expr: >
+          sum(rate(beacon_engine_requests_total{job="teku",outcome="success",method=~"forkchoice_updated.*|new_payload.*"}[5m]))
+          / clamp_min(sum(rate(beacon_engine_requests_total{job="teku",method=~"forkchoice_updated.*|new_payload.*"}[5m])), 0.001)
+      - record: slo:engine_success:ratio_rate1h:validating
+        expr: >
+          sum(rate(beacon_engine_requests_total{job="teku",outcome="success",method=~"forkchoice_updated.*|new_payload.*"}[1h]))
+          / clamp_min(sum(rate(beacon_engine_requests_total{job="teku",method=~"forkchoice_updated.*|new_payload.*"}[1h])), 0.001)
+      - record: slo:engine_budget_burn:rate5m:validating
+        expr: (1 - slo:engine_success:ratio_rate5m:validating) / (1 - 0.999)
+      - record: slo:engine_budget_burn:rate1h:validating
+        expr: (1 - slo:engine_success:ratio_rate1h:validating) / (1 - 0.999)
+      # archive pair (lighthouse -> geth)
+      - record: slo:engine_success:ratio_rate5m:archive
+        expr: >
+          sum(rate(execution_layer_payload_status{job="lighthouse",status="valid"}[5m]))
+          / clamp_min(sum(rate(execution_layer_payload_status{job="lighthouse"}[5m])), 0.001)
+      - record: slo:engine_success:ratio_rate1h:archive
+        expr: >
+          sum(rate(execution_layer_payload_status{job="lighthouse",status="valid"}[1h]))
+          / clamp_min(sum(rate(execution_layer_payload_status{job="lighthouse"}[1h])), 0.001)
+      - record: slo:engine_budget_burn:rate5m:archive
+        expr: (1 - slo:engine_success:ratio_rate5m:archive) / (1 - 0.999)
+      - record: slo:engine_budget_burn:rate1h:archive
+        expr: (1 - slo:engine_success:ratio_rate1h:archive) / (1 - 0.999)
+
+  - name: slo-engine-api-alerts
+    rules:
+      - alert: EngineApiFastBurn
+        expr: >
+          slo:engine_budget_burn:rate5m:validating > 14.4 and slo:engine_budget_burn:rate1h:validating > 14.4
+        for: 2m
+        labels:
+          severity: page
+          pair: validating
+        annotations:
+          summary: "validating pair engine API (teku->besu) fast-burning its 99.9% success budget"
+      - alert: EngineApiFastBurn
+        expr: >
+          slo:engine_budget_burn:rate5m:archive > 14.4 and slo:engine_budget_burn:rate1h:archive > 14.4
+        for: 2m
+        labels:
+          severity: page
+          pair: archive
+        annotations:
+          summary: "archive pair engine API (lighthouse->geth) fast-burning its 99.9% success budget"
+
   - name: slo-archive-rpc-recording
     interval: 15s
     rules:

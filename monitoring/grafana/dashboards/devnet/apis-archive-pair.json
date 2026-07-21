@@ -1,96 +1,381 @@
 {
  "uid": "devnet-apis-archive",
  "title": "Devnet - Archive Pair APIs (geth + lighthouse)",
- "description": "Every interface of the archive pair in one place, mirroring the staking-pair board. The archive pair is the service side of the stack: geth serves external JSON-RPC (the archive RPC product), the engine API links lighthouse to geth, and lighthouse's Beacon REST API is genuinely busy because remote-vc drives its validators over REST. The metric names differ from the staking pair - geth folds the engine API into its rpc_duration_* namespace, lighthouse records engine calls as execution_layer_* - which is client diversity made visible.",
- "tags": ["devnet", "api", "archive-pair"],
+ "description": "Every interface of the archive pair in one place, mirroring the validating pair board. The archive pair is the service side of the stack: geth serves external JSON-RPC (the archive RPC product), the engine API links lighthouse to geth, and lighthouse's Beacon REST API is genuinely busy because remote-vc drives its validators over REST. The metric names differ from the validating pair - geth folds the engine API into its rpc_duration_* namespace, lighthouse records engine calls as execution_layer_* - which is client diversity made visible.",
+ "tags": [
+  "devnet",
+  "api",
+  "archive-pair"
+ ],
  "timezone": "browser",
  "schemaVersion": 39,
  "refresh": "10s",
- "time": { "from": "now-1h", "to": "now" },
+ "time": {
+  "from": "now-1h",
+  "to": "now"
+ },
  "panels": [
-  { "type": "row", "title": "Health summary (the SLI candidates)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": [] },
   {
-   "type": "stat", "title": "geth RPC req/s (all)",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_all_count{job=\"geth\"}[5m])" } ]
+   "type": "row",
+   "title": "Health summary (the SLI candidates)",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "panels": []
   },
   {
-   "type": "stat", "title": "engine forkchoice+newPayload /s",
+   "type": "stat",
+   "title": "geth RPC req/s (all)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_all_count{job=\"geth\"}[5m])"
+    }
+   ]
+  },
+  {
+   "type": "stat",
+   "title": "engine forkchoice+newPayload /s",
    "description": "The two engine methods that run every slot, from geth's server side.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(rpc_duration_engine_forkchoiceUpdatedV3_success_count{job=\"geth\"}[5m]) + rate(rpc_duration_engine_newPayloadV4_success_count{job=\"geth\"}[5m]))" } ]
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 6,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(rpc_duration_engine_forkchoiceUpdatedV3_success_count{job=\"geth\"}[5m]) + rate(rpc_duration_engine_newPayloadV4_success_count{job=\"geth\"}[5m]))"
+    }
+   ]
   },
   {
-   "type": "stat", "title": "lighthouse REST 2xx rate",
+   "type": "stat",
+   "title": "lighthouse REST 2xx rate",
    "description": "This pair's CL REST API is busy: remote-vc drives its validators over it.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_api_status_codes_total{job=\"lighthouse\",status=~\"2.*\"}[5m])) * 60" } ]
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(http_api_status_codes_total{job=\"lighthouse\",status=~\"2.*\"}[5m])) * 60"
+    }
+   ]
   },
   {
-   "type": "stat", "title": "lighthouse REST errors / min",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_api_status_codes_total{job=\"lighthouse\",status=~\"[45].*\"}[5m])) * 60" } ],
-   "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 } ] } }, "overrides": [] }
+   "type": "stat",
+   "title": "lighthouse REST errors / min",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(http_api_status_codes_total{job=\"lighthouse\",status=~\"[45].*\"}[5m])) * 60"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "yellow",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 10
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
   },
-
-  { "type": "row", "title": "1 - geth JSON-RPC (external: the archive RPC product)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "panels": [] },
   {
-   "type": "timeseries", "title": "RPC calls / min by method (non-engine)",
+   "type": "row",
+   "title": "1 - geth JSON-RPC (external: the archive RPC product)",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 6
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "RPC calls / min by method (non-engine)",
    "description": "geth exposes each method as its own rpc_duration_<method> metric. Key external methods listed explicitly (this Prometheus rejects bare __name__ regex selectors). eth_blockNumber and eth_getBalance are the common point reads; debug_traceBlockByNumber is the heavy path.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 7 },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 7
+   },
    "targets": [
-    { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_eth_blockNumber_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "eth_blockNumber" },
-    { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_eth_getBalance_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "eth_getBalance" },
-    { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_debug_traceBlockByNumber_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "debug_traceBlockByNumber" }
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_eth_blockNumber_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "eth_blockNumber"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_eth_getBalance_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "eth_getBalance"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_debug_traceBlockByNumber_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "debug_traceBlockByNumber"
+    }
    ]
   },
   {
-   "type": "timeseries", "title": "total RPC throughput",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 7 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_all_count{job=\"geth\"}[5m]) * 60", "legendFormat": "calls/min (all)" } ]
+   "type": "timeseries",
+   "title": "total RPC throughput",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_all_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "calls/min (all)"
+    }
+   ]
   },
-
-  { "type": "row", "title": "2 - engine API (internal: lighthouse drives geth)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }, "panels": [] },
   {
-   "type": "timeseries", "title": "geth engine calls / min by method (server side)",
+   "type": "row",
+   "title": "2 - engine API (internal: lighthouse drives geth)",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 14
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "geth engine calls / min by method (server side)",
    "description": "geth's view of the engine API, listed explicitly per method: forkchoice_updated sets the head, new_payload validates a block, get_payload builds one.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 15 },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 15
+   },
    "targets": [
-    { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_engine_forkchoiceUpdatedV3_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "forkchoiceUpdated" },
-    { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_engine_newPayloadV4_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "newPayload" },
-    { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(rpc_duration_engine_getPayloadV4_success_count{job=\"geth\"}[5m]) * 60", "legendFormat": "getPayload" }
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_engine_forkchoiceUpdatedV3_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "forkchoiceUpdated"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_engine_newPayloadV4_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "newPayload"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "rate(rpc_duration_engine_getPayloadV4_success_count{job=\"geth\"}[5m]) * 60",
+     "legendFormat": "getPayload"
+    }
    ]
   },
   {
-   "type": "timeseries", "title": "lighthouse -> geth engine request rate (client side)",
+   "type": "timeseries",
+   "title": "lighthouse -> geth engine request rate (client side)",
    "description": "lighthouse records its calls into geth as execution_layer_request_times. This is the archive pair's equivalent of teku's beacon_engine_* - a different client, a different metric name.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 15 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(execution_layer_request_times_count{job=\"lighthouse\"}[5m])) * 60", "legendFormat": "engine calls/min" } ]
-  },
-
-  { "type": "row", "title": "3 - lighthouse Beacon REST API (external: serves remote-vc)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 }, "panels": [] },
-  {
-   "type": "timeseries", "title": "REST responses / min by status code",
-   "description": "The busy REST surface - remote-vc polls it every slot for duties. 4xx/5xx climbing is a client or node problem.",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 0, "y": 23 },
-   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum by (status) (rate(http_api_status_codes_total{job=\"lighthouse\"}[5m])) * 60", "legendFormat": "{{status}}" } ]
-  },
-  {
-   "type": "timeseries", "title": "REST request rate & latency",
-   "datasource": { "type": "prometheus", "uid": "prometheus" },
-   "gridPos": { "h": 7, "w": 12, "x": 12, "y": 23 },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 15
+   },
    "targets": [
-    { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_api_paths_times_count{job=\"lighthouse\"}[5m])) * 60", "legendFormat": "req/min" },
-    { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_api_paths_times_sum{job=\"lighthouse\"}[5m])) / clamp_min(sum(rate(http_api_paths_times_count{job=\"lighthouse\"}[5m])), 0.0001)", "legendFormat": "avg latency (s)" }
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(execution_layer_request_times_count{job=\"lighthouse\"}[5m])) * 60",
+     "legendFormat": "engine calls/min"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "3 - lighthouse Beacon REST API (external: serves remote-vc)",
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 22
+   },
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "REST responses / min by status code",
+   "description": "The busy REST surface - remote-vc polls it every slot for duties. 4xx/5xx climbing is a client or node problem.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (status) (rate(http_api_status_codes_total{job=\"lighthouse\"}[5m])) * 60",
+     "legendFormat": "{{status}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "REST request rate & latency",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(http_api_paths_times_count{job=\"lighthouse\"}[5m])) * 60",
+     "legendFormat": "req/min"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(rate(http_api_paths_times_sum{job=\"lighthouse\"}[5m])) / clamp_min(sum(rate(http_api_paths_times_count{job=\"lighthouse\"}[5m])), 0.0001)",
+     "legendFormat": "avg latency (s)"
+    }
    ]
   }
  ]

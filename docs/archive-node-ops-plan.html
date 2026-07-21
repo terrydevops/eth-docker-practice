@@ -1,0 +1,302 @@
+<style>
+  :root {
+    --bg: #f5f7f8;
+    --surface: #ffffff;
+    --surface-2: #eef1f3;
+    --ink: #171d22;
+    --muted: #5a656e;
+    --faint: #8a949c;
+    --border: #e0e5e9;
+    --accent: #0b7a75;
+    --accent-soft: #0b7a7514;
+    --good: #1c8a51;
+    --good-soft: #1c8a5116;
+    --warn: #b1620a;
+    --warn-soft: #b1620a16;
+    --mono: ui-monospace, "SF Mono", "Menlo", "Cascadia Mono", monospace;
+    --sans: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --maxw: 74ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #151b22;
+      --surface-2: #1b222b;
+      --ink: #e6edf3;
+      --muted: #8b98a5;
+      --faint: #6b7681;
+      --border: #232c36;
+      --accent: #40cabf;
+      --accent-soft: #40cabf1a;
+      --good: #46bd7c;
+      --good-soft: #46bd7c1c;
+      --warn: #e0a44a;
+      --warn-soft: #e0a44a1c;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f7f8; --surface: #ffffff; --surface-2: #eef1f3; --ink: #171d22;
+    --muted: #5a656e; --faint: #8a949c; --border: #e0e5e9; --accent: #0b7a75;
+    --accent-soft: #0b7a7514; --good: #1c8a51; --good-soft: #1c8a5116;
+    --warn: #b1620a; --warn-soft: #b1620a16;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1117; --surface: #151b22; --surface-2: #1b222b; --ink: #e6edf3;
+    --muted: #8b98a5; --faint: #6b7681; --border: #232c36; --accent: #40cabf;
+    --accent-soft: #40cabf1a; --good: #46bd7c; --good-soft: #46bd7c1c;
+    --warn: #e0a44a; --warn-soft: #e0a44a1c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.65; font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: clamp(1.5rem, 4vw, 4rem) clamp(1.1rem, 4vw, 2.5rem) 5rem; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4.5vw, 2.9rem); line-height: 1.08; margin: 0 0 1.1rem;
+    letter-spacing: -.02em; text-wrap: balance; font-weight: 650;
+  }
+  .lede {
+    font-size: 1.12rem; color: var(--muted); max-width: var(--maxw);
+    margin: 0 0 2rem; text-wrap: pretty;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* live metric strip */
+  .metrics {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; margin: 0 0 2.75rem;
+  }
+  .metric { background: var(--surface); padding: .9rem 1.1rem; }
+  .metric .v { font-family: var(--mono); font-size: 1.35rem; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .metric .k { font-size: .72rem; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; margin-top: .2rem; }
+  .metric .v.ok { color: var(--good); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; margin: 0 0 2.5rem; font-size: .85rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: .45rem; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-family: var(--mono); font-size: .7rem; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase;
+    padding: .16rem .5rem; border-radius: 5px; white-space: nowrap;
+    vertical-align: middle;
+  }
+  .pill.done { color: var(--good); background: var(--good-soft); }
+  .pill.gap  { color: var(--warn); background: var(--warn-soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.done { background: var(--good); }
+  .dot.gap  { background: var(--warn); }
+
+  section { margin: 0 0 2.6rem; scroll-margin-top: 2rem; }
+  .sec-head { display: flex; align-items: baseline; gap: .7rem; margin: 0 0 .3rem; }
+  .sec-num { font-family: var(--mono); font-size: .85rem; color: var(--accent); font-weight: 600; flex: none; }
+  h2 { font-size: 1.32rem; margin: 0; letter-spacing: -.01em; font-weight: 640; text-wrap: balance; }
+  .sec-sub { color: var(--muted); max-width: var(--maxw); margin: .55rem 0 1.1rem; }
+
+  h3 { font-size: .82rem; text-transform: uppercase; letter-spacing: .09em; color: var(--faint);
+       margin: 1.5rem 0 .7rem; font-weight: 600; font-family: var(--mono); }
+
+  p { max-width: var(--maxw); margin: .8rem 0; text-wrap: pretty; }
+  ul { max-width: var(--maxw); padding-left: 0; list-style: none; margin: .8rem 0; }
+  li { position: relative; padding-left: 1.4rem; margin: .5rem 0; }
+  li::before { content: ""; position: absolute; left: .35rem; top: .68em;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  strong { color: var(--ink); font-weight: 600; }
+  code { font-family: var(--mono); font-size: .86em; background: var(--surface-2);
+    padding: .1em .38em; border-radius: 4px; }
+
+  .diagram {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.2rem 1.3rem; margin: 1.2rem 0; overflow-x: auto;
+  }
+  .diagram pre { font-family: var(--mono); font-size: .82rem; line-height: 1.55; margin: 0; color: var(--muted); }
+  .diagram .hl { color: var(--accent); }
+  .diagram .g { color: var(--warn); }
+
+  table { width: 100%; border-collapse: collapse; margin: 1.1rem 0; font-size: .92rem; }
+  thead th { text-align: left; font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--faint); font-weight: 600; padding: 0 .8rem .55rem; border-bottom: 1px solid var(--border); }
+  tbody td { padding: .62rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr td:first-child { color: var(--ink); }
+  .tbl-wrap { overflow-x: auto; }
+
+  .callout {
+    background: var(--accent-soft); border-left: 2.5px solid var(--accent);
+    border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.4rem 0;
+  }
+  .callout p { margin: 0; max-width: none; }
+  .callout .lbl { font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--accent); font-weight: 600; display: block; margin-bottom: .4rem; }
+
+  .rule { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+  footer { color: var(--faint); font-size: .82rem; font-family: var(--mono); margin-top: 3rem; }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    section, .metrics, h1, .lede { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    .lede { animation-delay: .04s; } .metrics { animation-delay: .08s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Operational Plan · Ethereum Archive Node Service</p>
+  <h1>Running an archive node like a service, not a node</h1>
+  <p class="lede">An archive node is a <strong>read-only RPC service</strong> — it holds no keys and signs nothing; signing belongs to the staking side of the stack. Its production concerns are those of any high-value stateful API: availability, the front door, data that only grows, and how fast you can recover it. This plan is organised around those, and marks what this deployment already does against what production adds. Every figure below was measured on the running stack.</p>
+
+  <div class="metrics">
+    <div class="metric"><div class="v ok">99.97%</div><div class="k">RPC avail · 6h</div></div>
+    <div class="metric"><div class="v">9.5ms</div><div class="k">point read p95</div></div>
+    <div class="metric"><div class="v ok">0</div><div class="k">archive tip-lag</div></div>
+    <div class="metric"><div class="v ok">17/17</div><div class="k">scrape targets up</div></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot done"></span> <strong style="color:var(--muted);font-weight:600">Done</strong> — implemented in this deployment</span>
+    <span><span class="dot gap"></span> <strong style="color:var(--muted);font-weight:600">Gap</strong> — what a production build adds</span>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">00</span><h2>What "archive" changes about operations</h2></div>
+    <p class="sec-sub">A full node prunes historical state; an archive node keeps every intermediate state-trie node for every block. Two consequences drive the entire plan.</p>
+    <ul>
+      <li><strong>The data only grows, and it is enormous.</strong> Mainnet archive is tens of TB. Disk is not a threshold you watch, it is a capacity you continuously plan.</li>
+      <li><strong>You cannot resync it in an incident.</strong> Rebuilding a mainnet archive from genesis takes weeks. Recovery must be restore-from-snapshot, never resync — a fact that reshapes backup, HA and upgrades.</li>
+    </ul>
+    <p>Neither is true of a validating full node, which is why an archive service needs its own plan rather than a generic node runbook.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Availability &amp; topology</h2></div>
+    <p class="sec-sub">Today the gateway routes to one backend. One archive node down = service down. Every other item here is secondary to fixing that.</p>
+    <div class="diagram"><pre>              [ ELB / CDN ]        <span class="g">TLS · WAF · global rate-limit · DDoS</span>
+                    │
+              [ gateway tier ]     method routing · per-key limit · health
+              (haproxy, ≥2)
+          ┌─────────┼─────────┐
+      <span class="g">archive-1 archive-2 archive-3</span>    <span class="g">N replicas, health-checked, drainable</span>
+          │         │         │
+       [ CL ]    [ CL ]    [ CL ]     each archive EL pairs with its own CL
+                    │
+           <span class="g">[ snapshot / backup store ]</span></pre></div>
+    <ul>
+      <li><span class="pill gap"><span class="dot gap"></span>Gap</span> &nbsp;<strong>N archive replicas</strong> behind the gateway, so any one can be drained for maintenance or upgrade without downtime. haproxy already supports this — it is <code>server geth2 / geth3</code> plus health checks — so this is an infrastructure gap, not a config one.</li>
+      <li>Each archive EL pairs with <strong>its own CL</strong> feeding head updates over the engine API; you do not share one CL across archive ELs.</li>
+      <li>Spread across <strong>failure domains</strong> — different hosts and AZs, so a zone loss drops one replica, not the service.</li>
+      <li><span class="pill done"><span class="dot done"></span>Done</span> &nbsp;Backends health-checked with a real <code>eth_blockNumber</code> call, not a TCP ping; an unhealthy backend is removed automatically.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>The front door — the nginx / ELB layer</h2></div>
+    <p class="sec-sub">haproxy is a competent internal gateway, but the internet-facing edge needs a tier in front of it. Production splits the door in two.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Edge concern</th><th>Purpose</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td>TLS termination</td><td>plaintext JSON-RPC can't face the internet</td><td><span class="pill gap">Gap</span></td></tr>
+        <tr><td>Global rate-limit &amp; DDoS</td><td>absorb volumetric attacks before a node sees them</td><td><span class="pill gap">Gap</span></td></tr>
+        <tr><td>Per-API-key auth</td><td>without it, anyone can drain the node</td><td><span class="pill gap">Gap</span></td></tr>
+        <tr><td>Per-key rate-limit</td><td>one client must not exhaust the pool</td><td><span class="pill gap">Gap</span></td></tr>
+        <tr><td>Method allowlist</td><td>block <code>admin_</code>, <code>personal_</code>, <code>debug_setHead</code> at the edge</td><td><span class="pill gap">Gap</span></td></tr>
+        <tr><td>Method-class routing</td><td>trace/debug isolated from point reads</td><td><span class="pill done">Done</span></td></tr>
+        <tr><td>Backend health &amp; failover</td><td>drop a dead backend automatically</td><td><span class="pill done">Done</span></td></tr>
+      </tbody>
+    </table></div>
+    <p>The most dangerous single omission is the <strong>method allowlist</strong>: an archive node exposes <code>debug_</code>/<code>trace_</code> for legitimate reasons, but that same surface includes state-mutating and node-control methods that must never be reachable from outside.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Capacity &amp; query management</h2></div>
+    <p class="sec-sub">Archive workloads are bimodal: cheap point reads and expensive replays. A single <code>debug_traceTransaction</code> can pin a core for seconds.</p>
+    <ul>
+      <li><span class="pill done"><span class="dot done"></span>Done</span> &nbsp;The gateway routes <code>debug_/trace_</code> to a <strong>strictly-capped heavy pool</strong> (maxconn 2) and point reads to a wider pool (maxconn 64). One expensive query cannot starve the cheap ones — the core resource-isolation problem of archive RPC.</li>
+      <li><span class="pill gap"><span class="dot gap"></span>Gap</span> &nbsp;<strong>Per-key quotas on heavy methods</strong> — trace is a premium tier, not a default.</li>
+      <li><span class="pill gap"><span class="dot gap"></span>Gap</span> &nbsp;<strong>A caching layer</strong> for immutable historical reads — state at a finalised block never changes, so it is perfectly cacheable. Cuts backend load for the common "same historical query, many clients" pattern.</li>
+      <li><span class="pill gap"><span class="dot gap"></span>Gap</span> &nbsp;<strong>Read-replica scaling</strong> — point and heavy pools scale on different replica counts because their cost profiles differ.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Data lifecycle — the part unique to archive</h2></div>
+    <p class="sec-sub">The load-bearing decisions of the whole plan live here, because the data is huge and cannot be rebuilt on demand.</p>
+    <h3>Disk growth</h3>
+    <p>Archive disk grows monotonically and fast — plan capacity as a rate, not a level. <span class="pill done">Done</span> This deployment already alerts <strong>predictively</strong>: projected time-to-full, not a static "5% left", because the useful warning is "you have N days."</p>
+    <h3>Backup &amp; recovery — the decision everything leans on</h3>
+    <ul>
+      <li><span class="pill gap"><span class="dot gap"></span>Gap</span> &nbsp;Because resync takes weeks, recovery must be <strong>restore-from-snapshot</strong>: periodic volume snapshots shipped to object storage.</li>
+      <li>Recovery target measured and <strong>rehearsed</strong> — fresh replica from snapshot to serving in hours, not weeks.</li>
+      <li>Ancient history via <strong>era1 files</strong> where the client supports it, so it need not ride in every snapshot.</li>
+      <li>Snapshots tested by actually restoring them — an untested backup is a hope, not a plan.</li>
+    </ul>
+    <h3>Data integrity</h3>
+    <p><span class="pill done">Done</span> The synthetic prober compares the archive node's historical answers against the validating node and pages on divergence. Under a "trust the operator" model this self-check is the only thing between a silently corrupt state DB and a client acting on bad data.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Change management</h2></div>
+    <ul>
+      <li><span class="pill gap">Gap</span> &nbsp;<strong>Rolling upgrades</strong>: drain → upgrade → re-add → next. The N-replica topology is what makes zero-downtime upgrades possible.</li>
+      <li><span class="pill gap">Gap</span> &nbsp;<strong>Canary</strong>: upgrade one replica, watch its SLIs against the others before rolling the fleet — different versions answering the same queries is also a free correctness check.</li>
+      <li><span class="pill gap">Gap</span> &nbsp;<strong>Hard-fork readiness</strong>: archive nodes must upgrade on schedule or fork onto the wrong chain. Track activation, stage ahead, verify post-fork head agreement.</li>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Client diversity</strong>: geth for archive, besu for validating — running more than one implementation removes the risk that a single storage bug corrupts the fleet's answers identically.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Observability — the strong side of this build</h2></div>
+    <p class="sec-sub">This is where the deployment is ahead of a typical archive service rather than behind.</p>
+    <ul>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Availability SLO with an error budget</strong> (99.9%), measured by a prober <em>through the gateway</em> — user-visible truth, not node self-report — with multi-window burn-rate alerting (fast burn pages, slow burn tickets).</li>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Latency SLOs split by cost class</strong> — point p95 ≤ 300ms, trace p95 ≤ 10s — because they are different products on one endpoint.</li>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Correctness &amp; freshness</strong> — divergence pages immediately; tip-lag catches correct answers about stale state.</li>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Self-monitoring</strong> — the collection pipeline and alert-delivery path are themselves watched; a frozen metric or undelivered alert is caught.</li>
+      <li><span class="pill gap">Gap</span> &nbsp;<strong>Multi-region probes</strong> — measure the network path real users take, not just localhost.</li>
+    </ul>
+    <div class="callout"><p><span class="lbl">Live</span>RPC availability 99.97% over 6h · point-read p95 ~9.5ms · archive tip-lag 0 blocks · 17/17 scrape targets up.</p></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Incident response &amp; security</h2></div>
+    <ul>
+      <li><strong>Runbooks</strong> per alert class, archive-specific ones on top of the general runbook: disk-fill projection breached, tip-lag climbing, correctness divergence, a replica failing health checks.</li>
+      <li><span class="pill done">Done</span> &nbsp;<strong>Severity routing</strong> already distinguishes <code>page</code> (wake someone) from <code>ticket</code> (working hours), with cause-pages-symptoms-quiet inhibition.</li>
+      <li><strong>Security posture</strong>: engine API JWT-authenticated to its CL only; method allowlist at the gateway; TLS everywhere client-facing; network isolation between the serving tier and node internals.</li>
+    </ul>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="sec-head"><span class="sec-num">Σ</span><h2>Gap summary</h2></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Area</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td>Query isolation — heavy vs point</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>Backend health &amp; auto-failover</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>SLO / error budget / burn-rate alerting</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>Correctness &amp; freshness probing</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>Self-monitoring &amp; alert delivery</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>Predictive disk alerting</td><td><span class="pill done"><span class="dot done"></span>Done</span></td></tr>
+        <tr><td>HA — multiple archive replicas</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+        <tr><td>Edge tier — TLS, auth, per-key limit, WAF</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+        <tr><td>Method allowlist at the gateway</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+        <tr><td>Snapshot backup &amp; rehearsed restore</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+        <tr><td>Rolling / canary upgrade process</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+        <tr><td>Caching layer for immutable reads</td><td><span class="pill gap"><span class="dot gap"></span>Gap</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><p><span class="lbl">The shape of the gap</span>The observability layer is ahead of a typical production build, while the availability layer — replication, the edge tier, and snapshot-based recovery — is behind. Priority follows from that: <strong>HA and recovery first, because a single node with excellent monitoring is still a single node.</strong></p></div>
+  </section>
+
+  <footer>eth-docker-practice · docs/archive-node-ops-plan.md · figures measured on the running stack</footer>
+</div>

@@ -35,20 +35,6 @@
       "panels": []
     },
     {
-      "type": "text",
-      "title": "SLO definition & policy",
-      "gridPos": {
-        "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 1
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "## The archive-RPC SLO, in four questions\n\n**What is the SLO for archive queries?**\nThree promises on the archive RPC surface, measured by a synthetic prober **through the gateway** (user-visible truth, not node self-report):\n- **Availability >= 99.9%** - a successful, correct JSON-RPC response. 99.9% over 30 days = **43 minutes** of error budget.\n- **Point-read latency p95 <= 300ms** (eth_getBalance, eth_getLogs, ...). Currently **~9.7ms**.\n- **Trace latency p95 <= 10s** (debug_traceTransaction, trace_block) - a separate, looser target because it is a different product on the same endpoint.\n- Plus a hard invariant: **correctness** - the archive node's historical answers must match the validating node.\n\n**What breaks the error budget?**\nOnly failures the *user* sees, at the gateway: a request that returns an error, times out, or comes back **wrong**. The budget is spent by the **rate** of these, not by any single blip - tracked as a burn rate (multiples of the sustainable spend). A correctness divergence or the gateway/archive being unreachable burns budget; internal noise that never reaches a user does not.\n\n**What failures are acceptable?**\nAnything that does not cost a user a correct, timely answer:\n- Brief latency spikes that stay inside p95 - and empty panels for surfaces this devnet never exercises (snap sync, blob traffic).\n- The archive node lagging the validating head by a block or two, as long as answers are still correct for the height asked.\n- A single probe blip - the multi-window burn-rate design deliberately does **not** fire on one bad sample.\n- Trace queries being slow up to 10s - that is within their SLO, not a failure.\n\n**What pages an on-call engineer?**\nOnly what is either burning the budget fast or is unsafe - never a slow-burn ticket:\n- **Fast burn (page):** availability burning **>14.4x** budget on both a 5m and 1h window - at that rate 30 days of budget is gone in ~2 days.\n- **Correctness divergence (page):** the archive returns an answer that disagrees with the validating node. Immediate - a wrong answer is worse than a slow one, and no user will report it.\n- **Gateway / prober down (page):** the SLO is unmeasured - flying blind.\n- Slow burn, latency drift, tip-lag \u2192 **ticket**, handled in working hours.\n\n_Live: availability 100% (6h), point p95 ~9.7ms, trace p95 ~10ms, correctness OK, tip-lag 0. Budget untouched._"
-      }
-    },
-    {
       "type": "stat",
       "title": "Availability (5m)",
       "datasource": {
@@ -59,7 +45,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -120,7 +106,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -182,7 +168,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -242,7 +228,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -310,7 +296,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -369,7 +355,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 14
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -429,7 +415,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -502,7 +488,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 5
       },
       "fieldConfig": {
         "defaults": {
@@ -580,7 +566,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -633,7 +619,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
