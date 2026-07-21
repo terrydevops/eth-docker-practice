@@ -1,0 +1,74 @@
+{
+ "uid": "lh-finality",
+ "title": "Lighthouse Finality",
+ "description": "The finality health of the archive pair's consensus client. Upstream lighthouse-metrics has no finality board - teku's does - so this fills that gap, mirroring teku's Trailing Distance and Participation panels. Finalized is the irreversible tip: an epoch justified two epochs running, unwindable only by burning a third of the total stake. Watch finalisation delay (head minus finalized) and participation staying above two-thirds.",
+ "tags": ["lighthouse", "finality", "consensus"],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "refresh": "10s",
+ "time": { "from": "now-1h", "to": "now" },
+ "panels": [
+  { "type": "row", "title": "Checkpoints", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": [] },
+  {
+   "type": "stat", "title": "finalized epoch",
+   "description": "The irreversible tip. Should climb steadily, trailing head by ~2 epochs.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_finalized_epoch{job=\"lighthouse\"}" } ]
+  },
+  {
+   "type": "stat", "title": "justified epoch",
+   "description": "One step short of finalized: >2/3 of stake voted for this epoch.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_current_justified_epoch{job=\"lighthouse\"}" } ]
+  },
+  {
+   "type": "stat", "title": "finalisation delay (epochs behind head)",
+   "description": "Head epoch minus finalized epoch. ~2 is healthy. Climbing above ~4 and staying there is finality stalling - the single most serious consensus failure.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "(beacon_head_slot{job=\"lighthouse\"} / 32) - beacon_finalized_epoch{job=\"lighthouse\"}" } ],
+   "fieldConfig": { "defaults": { "decimals": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 4 } ] } }, "overrides": [] }
+  },
+  {
+   "type": "stat", "title": "participation (prev epoch)",
+   "description": "Share of active stake that attested to the correct target. Must stay above 2/3 (66.7%) for the chain to finalize at all.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_participation_prev_epoch_target_attesting_gwei_total{job=\"lighthouse\"} / beacon_participation_current_epoch_active_gwei_total{job=\"lighthouse\"}" } ],
+   "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "yellow", "value": 0.667 }, { "color": "green", "value": 0.9 } ] } }, "overrides": [] }
+  },
+  { "type": "row", "title": "The three checkpoints over time", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "panels": [] },
+  {
+   "type": "timeseries", "title": "head / justified / finalized epoch",
+   "description": "The three-step ladder to irreversibility. Healthy: three lines climbing together, finalized trailing head by ~2. Finality stalling shows as finalized flattening while head keeps climbing - the gap between the top and bottom lines widening.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 9, "w": 16, "x": 0, "y": 7 },
+   "targets": [
+    { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_head_slot{job=\"lighthouse\"} / 32", "legendFormat": "head epoch" },
+    { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_current_justified_epoch{job=\"lighthouse\"}", "legendFormat": "justified" },
+    { "refId": "C", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_finalized_epoch{job=\"lighthouse\"}", "legendFormat": "finalized" }
+   ]
+  },
+  {
+   "type": "timeseries", "title": "finalisation delay",
+   "description": "The gap above, plotted. A flat low line is health; a rising line is the alarm.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 9, "w": 8, "x": 16, "y": 7 },
+   "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "(beacon_head_slot{job=\"lighthouse\"} / 32) - beacon_finalized_epoch{job=\"lighthouse\"}", "legendFormat": "epochs behind" } ],
+   "fieldConfig": { "defaults": { "decimals": 1 }, "overrides": [] }
+  },
+  { "type": "row", "title": "Participation (the root cause when finality stalls)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 }, "panels": [] },
+  {
+   "type": "timeseries", "title": "participation rate vs the 2/3 finality threshold",
+   "description": "Finality needs >2/3 of stake attesting correctly. If this line falls below the marked threshold, the chain cannot finalize - this is what to check first when finalisation delay climbs.",
+   "datasource": { "type": "prometheus", "uid": "prometheus" },
+   "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+   "targets": [
+    { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "beacon_participation_prev_epoch_target_attesting_gwei_total{job=\"lighthouse\"} / beacon_participation_current_epoch_active_gwei_total{job=\"lighthouse\"}", "legendFormat": "participation" }
+   ],
+   "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "fillOpacity": 8, "thresholdsStyle": { "mode": "line" } }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 0.667 } ] } }, "overrides": [] }
+  }
+ ]
+}
