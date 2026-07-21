@@ -128,6 +128,61 @@ groups:
         annotations:
           summary: "finalized epoch has not advanced in 15 minutes"
 
+  # ---- teku, the java consensus client ------------------------------------
+  # like besu, teku is a JVM client, so GC pauses are its way of missing slot
+  # deadlines. it also owns the engine API to besu - the link that feeds it
+  # blocks to validate - so a slow or failing engine API stalls consensus
+  # before anything looks down.
+  - name: teku
+    rules:
+      # same failure as besu: GC stop-the-world pauses make a consensus client
+      # miss attestation/proposal deadlines while technically up.
+      - alert: TekuGcPressure
+        expr: sum(rate(jvm_gc_collection_seconds_sum{job="teku"}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "teku JVM spends >10% of wall-clock in garbage collection"
+
+      - alert: TekuHeapHigh
+        expr: >
+          sum(jvm_memory_used_bytes{job="teku",area="heap"})
+          / sum(jvm_memory_max_bytes{job="teku",area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "teku JVM heap above 90% of its -Xmx ceiling"
+
+      # the engine API is how teku drives besu: forkchoice_updated to set the
+      # head, new_payload to validate a block. errors here mean teku and besu
+      # are failing to talk, which stalls block validation and, downstream,
+      # finality. exchange_capabilities errors at startup are benign, so scope
+      # to the two methods that run every slot.
+      - alert: TekuEngineApiErrors
+        expr: >
+          sum(rate(beacon_engine_requests_total{job="teku",outcome="error",method=~"forkchoice_updated.*|new_payload.*"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "teku engine API to besu is returning errors on forkchoice/newPayload - block validation at risk"
+
+      # get_payload is on the block-production hot path: when teku proposes, it
+      # asks besu to build the execution payload, and that call has a slot
+      # deadline. a rising share landing in the slow buckets (>=500ms) means
+      # besu is slow to build and teku risks missing its proposal slot.
+      - alert: TekuEnginePayloadSlow
+        expr: >
+          sum(rate(beacon_engine_requests_total{job="teku",method="get_payloadV4",interval=~"\\[500,.*|\\[1000,.*"}[10m]))
+          / sum(rate(beacon_engine_requests_total{job="teku",method="get_payloadV4"}[10m])) > 0.2
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "over 20% of teku get_payload calls to besu take >500ms - proposal slots at risk"
+
   # ---- besu, the java execution client ------------------------------------
   # the generic NodeDown/ChainStalled rules cover "besu is gone" and "the
   # whole chain stopped". these cover the ways besu degrades while still up:
