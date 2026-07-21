@@ -5,6 +5,13 @@ providers:
     type: file
     options:
       path: /var/lib/grafana/dashboards/clients
+  # lighthouse ships ~10 focused boards; keep them in their own folder so
+  # they do not crowd out the other clients in the Clients list
+  - name: client-lighthouse-dashboards
+    folder: Clients / Lighthouse
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/clients-lighthouse
   - name: devnet-dashboards
     folder: Devnet
     type: file
