@@ -257,9 +257,24 @@ services:
     image: "${HAPROXY_IMAGE:-haproxy:3.4.2-alpine}"
     container_name: gateway
     restart: unless-stopped
-    ports: ["8548:8548"]
+    ports: ["8548:8548", "8406:8406"]
     volumes:
       - ./gateway/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - geth
+      - health-sidecar
+    mem_limit: 64m
+
+  # freshness sidecar: compares geth's head to besu's and drives the gateway's
+  # agent-check, so a lagging archive node sheds traffic gradually. exposes a
+  # demo override to inject synthetic lag. config in gateway/health-sidecar.mjs
+  health-sidecar:
+    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    container_name: health-sidecar
+    restart: unless-stopped
+    command: ["node", "/app/health-sidecar.mjs"]
+    volumes:
+      - ./gateway/health-sidecar.mjs:/app/health-sidecar.mjs:ro
     depends_on:
       - geth
     mem_limit: 64m
