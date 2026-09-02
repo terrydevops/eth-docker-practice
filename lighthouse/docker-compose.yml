@@ -2,7 +2,7 @@
 services:
 
   lighthouse:
-    image: sigp/lighthouse:${VERSION:-v8.2.0}
+    image: sigp/lighthouse:${VERSION:-v8.2.2}
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
     ports:

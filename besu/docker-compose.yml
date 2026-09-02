@@ -2,7 +2,7 @@
 services:
 
   besu:
-    image: hyperledger/besu:26.6.1
+    image: hyperledger/besu:26.8.1
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
     environment:
