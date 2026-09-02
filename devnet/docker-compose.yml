@@ -71,6 +71,10 @@ services:
       - --data-base-path=/data
       - --network=/config/cl-config.yaml
       - --initial-state=/config/genesis.ssz
+      # devnet has few validators, so the weak-subjectivity period is short;
+      # after any downtime teku would refuse to sync. Ignore the check here.
+      - --ignore-weak-subjectivity-period-enabled
+
       - --ee-endpoint=http://besu:8551
       - --ee-jwt-secret-file=/jwt/pair-a.hex
       - --Xstartup-target-peer-count=0
