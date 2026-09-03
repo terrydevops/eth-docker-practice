@@ -207,6 +207,7 @@ services:
         --execution-jwt=/jwt/pair-b.hex
         --validator-monitor-auto
         --datadir=/data
+        --ignore-ws-check
         --port=9000
         --disable-upnp
         --disable-packet-filter
