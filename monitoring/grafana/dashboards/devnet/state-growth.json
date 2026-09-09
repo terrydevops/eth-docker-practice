@@ -1,0 +1,679 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "iconColor": "red",
+        "name": "chaos",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "chaos",
+            "load"
+          ],
+          "matchAny": true,
+          "limit": 100
+        }
+      }
+    ]
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "Devnet - State Growth",
+  "uid": "devnet-state-growth",
+  "tags": [
+    "devnet",
+    "archive",
+    "capacity"
+  ],
+  "templating": {
+    "list": []
+  },
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "version": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Chain Data (live)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "description": "Size of geth's live pebble database: recent state, receipts, indexes. Goes down as well as up: compaction rewrites and drops obsolete tables.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "eth_db_chaindata_disk_size{job=\"geth\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Ancient (frozen)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "description": "Blocks and receipts older than the freezer threshold, moved to flat append-only files. This part only grows.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "eth_db_chaindata_ancient_size{job=\"geth\"}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Bytes per Block (6h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "description": "Total growth over the last six hours divided by blocks imported. Negative while compaction is reclaiming space. Blocks on this devnet carry no transactions, so this is the floor, not a mainnet number.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(delta(eth_db_chaindata_disk_size{job=\"geth\"}[6h]) + delta(eth_db_chaindata_ancient_size{job=\"geth\"}[6h])) / delta(chain_head_block{job=\"geth\"}[6h])"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Days to Full (VM disk)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "description": "Free space divided by the six-hour fill rate: the projection the disk alert is built on. Meaningless when the disk is not filling (a huge number), which is the case on an idle devnet.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 14
+              },
+              {
+                "color": "green",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_filesystem_avail_bytes{mountpoint=\"/var/lib/docker\"} / clamp_min(-deriv(node_filesystem_avail_bytes{mountpoint=\"/var/lib/docker\"}[6h]), 1) / 86400"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Database Size",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "description": "Live database plus the freezer over time. The saw-tooth in the live part is compaction; the ancient part is the monotonic piece.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "eth_db_chaindata_disk_size{job=\"geth\"}",
+          "legendFormat": "live (pebble)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "eth_db_chaindata_ancient_size{job=\"geth\"}",
+          "legendFormat": "ancient",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Growth Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "description": "Hourly growth of each part, next to blocks per hour. With real transactions the live part climbs with every storage write; here it mostly reflects compaction.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "deriv(eth_db_chaindata_disk_size{job=\"geth\"}[1h]) * 3600",
+          "legendFormat": "live, bytes/hour",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "deriv(eth_db_chaindata_ancient_size{job=\"geth\"}[1h]) * 3600",
+          "legendFormat": "ancient, bytes/hour",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "deriv(chain_head_block{job=\"geth\"}[1h]) * 3600",
+          "legendFormat": "blocks/hour",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Read Latency p50 / p95 by Method Class",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "description": "Latency of point reads (eth_getBalance at random historical heights) and traces (debug_traceBlockByNumber), from the prober. Watch this against Database Size: the question is where it stops being flat.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"point\"}[10m])))",
+          "legendFormat": "point p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"point\"}[10m])))",
+          "legendFormat": "point p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))",
+          "legendFormat": "trace p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))",
+          "legendFormat": "trace p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Pebble Block Cache Hit Ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "description": "Share of database block reads served from pebble's block cache. Even at a few hundred megabytes this sits around 0.7 on the devnet; on a multi-terabyte archive it is what decides whether a historical read is a memory lookup or a disk seek.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(eth_db_chaindata_cache_block_hit{job=\"geth\"}[5m]) / clamp_min(rate(eth_db_chaindata_cache_block_hit{job=\"geth\"}[5m]) + rate(eth_db_chaindata_cache_block_miss{job=\"geth\"}[5m]), 1)",
+          "legendFormat": "hit ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "State Reads /s",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "description": "Account and storage-slot reads geth performs per second, from block processing and RPC. Rises with real transactions and with trace load.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(chain_account_reads_count{job=\"geth\"}[5m])",
+          "legendFormat": "accounts",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "rate(chain_storage_reads_count{job=\"geth\"}[5m])",
+          "legendFormat": "storage slots",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Compaction Time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "description": "Fraction of wall time pebble spends compacting. The hidden cost of state growth: on a large archive this competes with reads for disk bandwidth.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(eth_db_chaindata_compact_time{job=\"geth\"}[5m]) / 1e9",
+          "legendFormat": "compaction, s per s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk I/O",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "description": "Bytes per second geth reads from and writes to the database. Reads that do not come from cache show up here.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(eth_db_chaindata_disk_read{job=\"geth\"}[5m])",
+          "legendFormat": "read",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "rate(eth_db_chaindata_disk_write{job=\"geth\"}[5m])",
+          "legendFormat": "write",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "title": "Extrapolation",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Measured here: bytes per block on empty blocks (the floor), read latency and cache hit ratio at a few hundred megabytes of state.\n\nWhat a customer-facing number needs: bytes per storage write and per transaction, measured under a load that writes a known number of slots; then growth per year = writes per year x bytes per write, with the archive keeping every historical version. Read latency has to be measured as state grows past memory, because the curve is flat until the working set no longer fits and then it is not. Neither can be read off this devnet: the blocks are empty and the whole state sits in cache. Public reference points, not measured here: a hash-scheme geth archive is 20 TB and growing 2-3 TB a year; flat-storage archives (Erigon, Reth) are 2-3 TB for the same history."
+      }
+    }
+  ]
+}
