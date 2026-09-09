@@ -5,21 +5,24 @@
 
 services:
   prometheus:
-    image: "${PROMETHEUS_IMAGE:-prom/prometheus:v3.1.0}"
+    image: "${PROMETHEUS_IMAGE:-prom/prometheus:v3.14.0}"
     container_name: prometheus
     restart: unless-stopped
     command:
       - --config.file=/etc/prometheus/prometheus.yml
+      # 30-day SLO window (slo-rules.yml); the 15d default would cap it
+      - --storage.tsdb.retention.time=45d
     ports: ["${PROMETHEUS_PORT:-9090}:9090"]
     volumes:
       - ../monitoring/metrics/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../monitoring/metrics/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - ../monitoring/metrics/prometheus/slo-rules.yml:/etc/prometheus/slo-rules.yml:ro
+      - prometheus-data:/prometheus
 
   # alert delivery. without this the rules fire into the prometheus UI and
   # nobody hears them - grouping, inhibition and severity routing live here
   alertmanager:
-    image: "${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.28.1}"
+    image: "${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.34.0}"
     container_name: alertmanager
     restart: unless-stopped
     command:
@@ -34,7 +37,7 @@ services:
   # stands in for slack/pagerduty on a devnet: logs every notification and
   # counts them, so the delivery path itself is observable
   alert-sink:
-    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    image: "${PROBER_IMAGE:-node:26.8.1-alpine}"
     container_name: alert-sink
     restart: unless-stopped
     command: ["node", "/app/alert-sink.mjs"]
@@ -43,7 +46,7 @@ services:
     mem_limit: 64m
 
   grafana:
-    image: "${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
+    image: "${GRAFANA_IMAGE:-grafana/grafana:13.2.1}"
     container_name: grafana
     restart: unless-stopped
     environment:
@@ -58,7 +61,7 @@ services:
     depends_on: [prometheus]
 
   loki:
-    image: "${LOKI_IMAGE:-grafana/loki:3.5.1}"
+    image: "${LOKI_IMAGE:-grafana/loki:3.7.7}"
     container_name: loki
     restart: unless-stopped
     command: -config.file=/etc/loki/loki-config.yml
@@ -68,7 +71,7 @@ services:
     mem_limit: 512m
 
   promtail:
-    image: "${PROMTAIL_IMAGE:-grafana/promtail:3.5.1}"
+    image: "${PROMTAIL_IMAGE:-grafana/promtail:3.6.11}"
     container_name: promtail
     restart: unless-stopped
     command: -config.file=/etc/promtail/promtail-config.yml -config.expand-env=true
@@ -82,7 +85,7 @@ services:
 
   # machine monitoring: host cpu/mem/disk/net/filesystem
   node-exporter:
-    image: "${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.9.1}"
+    image: "${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.12.1}"
     container_name: node-exporter
     restart: unless-stopped
     command:
@@ -120,3 +123,4 @@ services:
 volumes:
   alertmanager-data:
   loki-data:
+  prometheus-data:

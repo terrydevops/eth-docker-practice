@@ -1,7 +1,7 @@
 services:
 
   postgres:
-    image: "postgres:17"
+    image: "postgres:17.11"
     restart: unless-stopped
     ports:
       - "${POSTGRES_IP:-127.0.0.1}:${PORT_POSTGRES:-5432}:5432"
@@ -18,7 +18,7 @@ services:
       timeout: 5s
 
   web3signer:
-    image: consensys/web3signer:26.4.2
+    image: consensys/web3signer:26.7.0
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
     depends_on:

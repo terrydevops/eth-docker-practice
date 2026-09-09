@@ -174,7 +174,7 @@ services:
 
   # fetches teku's ENR once its rest api is up, hands it to lighthouse
   enr-sidecar:
-    image: curlimages/curl:8.10.1
+    image: curlimages/curl:8.22.0
     user: "0:0"   # named volume is root-owned
     command: >
       sh -c 'until curl -sf http://teku:5051/eth/v1/node/identity -o /shared/id.json;
@@ -274,7 +274,7 @@ services:
   # agent-check, so a lagging archive node sheds traffic gradually. exposes a
   # demo override to inject synthetic lag. config in gateway/health-sidecar.mjs
   health-sidecar:
-    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    image: "${PROBER_IMAGE:-node:26.8.1-alpine}"
     container_name: health-sidecar
     restart: unless-stopped
     command: ["node", "/app/health-sidecar.mjs"]
@@ -288,7 +288,7 @@ services:
   # the correctness checks, scraped by prometheus (see monitoring/metrics/
   # prometheus/slo-rules.yml for the SLO computed from them)
   prober:
-    image: "${PROBER_IMAGE:-node:26.5.0-alpine}"
+    image: "${PROBER_IMAGE:-node:26.8.1-alpine}"
     container_name: prober
     restart: unless-stopped
     command: ["node", "/app/prober.mjs"]
