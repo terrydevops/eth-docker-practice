@@ -1,4 +1,3 @@
-
 services:
 
   teku-validator:
@@ -15,7 +14,7 @@ services:
       - --beacon-node-api-endpoint=${BEACON_NODE_API_ENDPOINT}
       - --validators-proposer-default-fee-recipient=${VALIDATORS_FEE_RECIPIENT}
       # local keystores, alternative to web3signer, do not enable both
-      #- --validator-keys=/var/lib/teku/validators/keys:/var/lib/teku/validators/passwords
+      # - --validator-keys=/var/lib/teku/validators/keys:/var/lib/teku/validators/passwords
       - --validators-external-signer-public-keys=${WEB3SIGNER_PUBLIC_KEYS}
       - --validators-external-signer-url=${WEB3SIGNER_ENDPOINT}
       - --validators-external-signer-slashing-protection-enabled
