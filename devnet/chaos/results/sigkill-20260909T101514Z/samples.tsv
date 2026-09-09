@@ -1,0 +1,4 @@
+time	phase	besu_head	geth_head	lag	geth1_status	geth1_weight	avail_5m	burn_5m	burn_1h	spent_min	alerts
+2026-09-09T10:15:15Z	before	13562	13562	0	UP	100	1	0	34.56998313659351	13.707752164659807	RpcAvailabilitySlowBurn/firing
+2026-09-09T10:15:44Z	after-kill-1	13565	13565	0	UP	100	1	0	34.56998313659362	13.707713124763536	RpcAvailabilitySlowBurn/firing
+2026-09-09T10:16:14Z	after	13567	13567	0	UP	100	0.9690721649484536	30.927835051546367	37.13080168776381	13.857750700434641	RpcAvailabilityFastBurn/pending RpcAvailabilitySlowBurn/firing
