@@ -54,3 +54,7 @@ monitor:
 
 logs:
 	docker compose logs -f --tail=20 besu teku prysm-validator geth lighthouse
+
+## play the three gateway tenants for a minute (Serving Layer dashboard)
+demo-tenants:
+	./scripts/demo-tenants.sh 60
