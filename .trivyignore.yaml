@@ -1,0 +1,29 @@
+# Accepted image-scan findings. Each entry has a reason and an expiry; the
+# weekly run fails once an entry expires.
+vulnerabilities:
+  # x/crypto/ssh server-side bypass. The fix (0.55.0) is newer than every
+  # vendor build in use (prometheus, alertmanager, node-exporter, grafana
+  # plugins, promtail, geth, mev-boost). Nothing here runs an SSH server.
+  - id: CVE-2026-56854
+    statement: ssh server only, no image runs one; re-scan at expiry
+    expired_at: 2026-10-09
+  # grpc authz interceptor, not used by geth or cadvisor
+  - id: CVE-2026-33186
+    statement: grpc authz not used; revisit with the next geth release
+    expired_at: 2026-11-08
+  # Go crypto/tls session resumption: gosu in postgres and cadvisor, neither opens TLS connections
+  - id: CVE-2025-68121
+    statement: no TLS connections from gosu or cadvisor
+    expired_at: 2026-11-08
+  # cadvisor stays on v0.49.2, the last release with the docker runtime
+  # handler; v0.50+ breaks the Containers dashboard and alerts
+  - id: CVE-2024-41110
+    statement: daemon-side authz plugin bug, cadvisor is a read-only client
+    expired_at: 2026-11-08
+  - id: CVE-2024-24790
+    statement: no address-based trust decisions in cadvisor
+    expired_at: 2026-11-08
+  # openssl, 32-bit only; left in mev-boost 1.12 (newest, not part of the devnet)
+  - id: CVE-2026-31789
+    statement: 32-bit only; mev-boost is not deployed by the devnet
+    expired_at: 2026-11-08

@@ -1,0 +1,119 @@
+# Security gate: lint, workflow audit (zizmor), secret scan and image CVE
+# scan (trivy). Actions are pinned to commit shas and tool images to
+# digests; the version comments are for dependabot.
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 3 * * 1'   # weekly: pins do not change, advisories do
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ECR mirror first, ghcr rate-limits anonymous DB pulls
+  TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2
+  TRIVY_JAVA_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck -S warning
+      - name: yamllint
+        run: pipx run yamllint==1.38.0 --strict .
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
+      - name: node --check
+        run: git ls-files -z '*.mjs' | xargs -0 -n1 node --check
+      - name: prometheus rules
+        run: >
+          docker run --rm --entrypoint promtool
+          -v "$PWD/monitoring/metrics/prometheus:/p:ro"
+          prom/prometheus:v3.14.0@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
+          check rules /p/alerts.yml /p/slo-rules.yml
+      - name: compose files render
+        run: .github/scripts/compose-config.sh
+      - name: image references are pinned
+        run: .github/scripts/list-images.sh --check
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: audit workflows
+        run: pipx run zizmor==1.30.0 --persona regular .github/workflows
+
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: trivy secret scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          exit-code: '1'
+        env:
+          TRIVY_SECRET_CONFIG: trivy-secret.yaml
+
+  images:
+    name: list images
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list.outputs.images }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: list images
+        id: list
+        run: echo "images=$(.github/scripts/list-images.sh --json)" >> "$GITHUB_OUTPUT"
+
+  image-scan:
+    name: scan ${{ matrix.image }}
+    needs: images
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.images.outputs.matrix) }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image }}
+          severity: CRITICAL
+          ignore-unfixed: 'true'
+          exit-code: '1'
+        env:
+          TRIVY_IGNOREFILE: .trivyignore.yaml

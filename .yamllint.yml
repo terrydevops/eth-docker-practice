@@ -1,0 +1,9 @@
+# compose files and prometheus rules carry long lines on purpose
+extends: default
+rules:
+  line-length: disable
+  document-start: disable
+  comments-indentation: disable
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off']
+    check-keys: false   # `on:` in workflows
