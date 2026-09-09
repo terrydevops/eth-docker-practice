@@ -10,19 +10,33 @@
 #   - traces on old blocks and transactions (heavy pool)
 #   - batch requests and JSON-RPC error semantics
 #
+#   - the serving layer: no key 401, wrong tier 403, rate limit 429
+#
 # Usage: ./scripts/test-rpc.sh [gateway_rpc] [cross_check_rpc]
+# Keys default to the ones in ../.env: the functional cases run as the
+# prober tenant (no rate limit), the tier and limit cases use the
+# compliance and forensics keys. Override with API_KEY / COMPLIANCE_KEY /
+# FORENSICS_KEY.
 set -u
 
 RPC="${1:-http://localhost:8548}"
 CROSS="${2:-http://localhost:8545}"
+ENVFILE="$(dirname "$0")/../.env"
+API_KEY="${API_KEY:-$(grep '^GATEWAY_KEY_PROBER=' "$ENVFILE" 2>/dev/null | cut -d= -f2)}"
+COMPLIANCE_KEY="${COMPLIANCE_KEY:-$(grep '^GATEWAY_KEY_COMPLIANCE=' "$ENVFILE" 2>/dev/null | cut -d= -f2)}"
+FORENSICS_KEY="${FORENSICS_KEY:-$(grep '^GATEWAY_KEY_FORENSICS=' "$ENVFILE" 2>/dev/null | cut -d= -f2)}"
 ACCOUNT="0x123463a4B065722E99115D6c222f267d9cABb524"
 GENESIS_BALANCE="0x43c33c1937564800000"
 
 PASS=0; FAIL=0; SKIP=0
 
 rpc() { # url method params -> raw body
-  curl -s -m 20 -X POST -H 'content-type: application/json' \
+  curl -s -m 20 -X POST -H 'content-type: application/json' -H "x-api-key: $API_KEY" \
     -d "{\"jsonrpc\":\"2.0\",\"method\":\"$2\",\"params\":$3,\"id\":1}" "$1"
+}
+code() { # key method -> http status from the gateway
+  curl -s -m 20 -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -H "x-api-key: $1" \
+    -d "{\"jsonrpc\":\"2.0\",\"method\":\"$2\",\"params\":[],\"id\":1}" "$RPC"
 }
 result() { python3 -c 'import sys,json
 try: b=json.load(sys.stdin)
@@ -103,7 +117,7 @@ else
 fi
 
 # 11. batch request: three calls in one round trip, three answers back
-n=$(curl -s -m 20 -X POST -H 'content-type: application/json' -d '[
+n=$(curl -s -m 20 -X POST -H 'content-type: application/json' -H "x-api-key: $API_KEY" -d '[
   {"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1},
   {"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2},
   {"jsonrpc":"2.0","method":"net_version","params":[],"id":3}]' "$RPC" \
@@ -113,6 +127,15 @@ n=$(curl -s -m 20 -X POST -H 'content-type: application/json' -d '[
 # 12. error semantics: unknown method -> JSON-RPC -32601, not a transport error
 code=$(rpc "$RPC" eth_noSuchMethod '[]' | python3 -c 'import sys,json;print(json.load(sys.stdin).get("error",{}).get("code",""))')
 [ "$code" = "-32601" ]; check "unknown method returns JSON-RPC -32601"
+
+# 13. serving layer: consumers, tiers, limits
+[ "$(code '' eth_blockNumber)" = 401 ]; check "no api key -> 401"
+[ "$(code "$COMPLIANCE_KEY" eth_blockNumber)" = 200 ]; check "compliance key reads -> 200"
+[ "$(code "$COMPLIANCE_KEY" debug_traceBlockByNumber)" = 403 ]; check "compliance key on debug_ -> 403"
+[ "$(code "$FORENSICS_KEY" debug_traceBlockByNumber)" = 200 ]; check "forensics key on debug_ -> 200"
+[ "$(code "$API_KEY" admin_peers)" = 403 ]; check "admin_ refused for every tenant -> 403"
+hits=0; for _ in $(seq 1 60); do [ "$(code "$FORENSICS_KEY" net_version)" = 429 ] && hits=$((hits+1)); done
+[ "$hits" -gt 0 ]; check "forensics burst of 60 in a few seconds -> some 429 ($hits)"
 
 echo
 echo "== summary: $PASS passed, $FAIL failed, $SKIP skipped =="

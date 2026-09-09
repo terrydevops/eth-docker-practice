@@ -60,6 +60,10 @@ GRAFANA_PORT=3001
 GETH_NODEKEY=${geth.priv}
 BESU_ENODE=enode://${besu.pub}@besu:30303
 LIGHTHOUSE_MULTIADDR=/dns4/lighthouse/tcp/9000/p2p/${lhPeerId}
+# gateway consumers (x-api-key), see gateway/haproxy.cfg
+GATEWAY_KEY_PROBER=${randomBytes(16).toString('hex')}
+GATEWAY_KEY_COMPLIANCE=${randomBytes(16).toString('hex')}
+GATEWAY_KEY_FORENSICS=${randomBytes(16).toString('hex')}
 `;
 writeFileSync('.env', env);
 console.log(env);

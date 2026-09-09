@@ -9,6 +9,7 @@ import http from 'node:http'
 
 const GATEWAY = process.env.GATEWAY_URL ?? 'http://gateway:8548'
 const CROSS = process.env.CROSS_URL ?? 'http://besu:8545'
+const API_KEY = process.env.GATEWAY_API_KEY ?? ''   // the gateway's prober tenant
 const ACCOUNT = process.env.PROBE_ACCOUNT ?? '0x123463a4B065722E99115D6c222f267d9cABb524'
 const GENESIS_BALANCE = BigInt(process.env.PROBE_GENESIS_BALANCE ?? '0x43c33c1937564800000')
 const POINT_INTERVAL_MS = 3000
@@ -52,7 +53,7 @@ async function rpc(url, method, params, timeoutMs = 20000) {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'x-api-key': API_KEY },
       body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
       signal: AbortSignal.timeout(timeoutMs),
     })

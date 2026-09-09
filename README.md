@@ -25,8 +25,8 @@ remote-signing mode. So the two pairs also demonstrate the two key-custody
 models side by side - local keys vs a remote signer with a slashing-
 protection database.
 
-Archive queries are served through the gateway on 8548 (raw node RPC stays on
-8547 for debugging). Client diversity across the pairs is deliberate: a
+Archive queries are served through the gateway on 8548 with an `x-api-key`
+(raw node RPC stays on 8547 for debugging). Client diversity across the pairs is deliberate: a
 consensus bug in one client cannot take out both, and each client gets alerts
 tuned to its own runtime (JVM GC for besu/teku, goroutines for geth).
 
@@ -84,9 +84,10 @@ for b in 0x1 0x58 0x5e; do
 done
 ```
 
-`make test-rpc` runs 13 acceptance checks of the JSON-RPC surface through
+`make test-rpc` runs 19 acceptance checks of the JSON-RPC surface through
 the gateway: historical state, transaction index, logs, traces, batch
-requests, error semantics.
+requests, error semantics, and the serving layer (no key, wrong tier,
+refused methods, rate limit).
 
 ### Monitoring
 
@@ -133,6 +134,11 @@ remote signer (must be zero, forever).
 Archive queries go through haproxy on **8548** - the SLO is defined and
 measured at the gateway, not at the node:
 
+- Every request carries an `x-api-key` that maps to a tenant: `compliance`
+  gets `eth_*` reads at 200 requests per 10 s, `forensics` also gets
+  `debug_`/`trace_` at 50 per 10 s with one heavy request in flight, the
+  internal `prober` is unlimited. `admin_`/`personal_`/`txpool_` are refused
+  for everyone. Keys are generated into `devnet/.env` (`GATEWAY_KEY_*`).
 - `debug_`/`trace_` calls route to a separate pool with a strict concurrency
   cap, so one pathological trace cannot starve point reads.
 - The health check is a JSON-RPC call, not a tcp probe: a node that accepts

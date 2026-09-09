@@ -82,7 +82,7 @@ say "done"
 cat <<EOF
 Grafana:      http://localhost:3001   (dashboards: Devnet, Machine, Containers, Logs, Clients)
 Prometheus:   http://localhost:9091   (19 alerts across machine/container/chain/SLO layers)
-Archive RPC:  http://localhost:8548   (gateway - the SLO measurement point)
+Archive RPC:  http://localhost:8548   (gateway - the SLO measurement point; x-api-key from .env, GATEWAY_KEY_*)
 
 To watch an SLO breach: docker compose stop geth   (fast-burn pages in ~3 min)
 To tear down:           ./scripts/quickstart.sh clean

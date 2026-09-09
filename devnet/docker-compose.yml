@@ -263,6 +263,10 @@ services:
     container_name: gateway
     restart: unless-stopped
     ports: ["8548:8548", "8406:8406"]
+    environment:
+      - GATEWAY_KEY_PROBER=${GATEWAY_KEY_PROBER}
+      - GATEWAY_KEY_COMPLIANCE=${GATEWAY_KEY_COMPLIANCE}
+      - GATEWAY_KEY_FORENSICS=${GATEWAY_KEY_FORENSICS}
     volumes:
       - ./gateway/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
@@ -292,6 +296,8 @@ services:
     container_name: prober
     restart: unless-stopped
     command: ["node", "/app/prober.mjs"]
+    environment:
+      - GATEWAY_API_KEY=${GATEWAY_KEY_PROBER}
     volumes:
       - ./scripts/prober.mjs:/app/prober.mjs:ro
     depends_on:

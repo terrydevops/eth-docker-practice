@@ -85,9 +85,9 @@ two:
 **Inner gateway — haproxy (this deployment):**
 | Concern | State |
 |---|---|
-| Per-API-key authentication | **missing** — without it anyone can drain the node |
-| Per-key rate limiting | **missing** — one client must not exhaust the pool |
-| Method allowlist | **missing** — `admin_`, `personal_`, `debug_setHead` must be blocked at the edge |
+| Per-API-key authentication | **done** — `x-api-key` maps to a tenant (prober, compliance, forensics); no key, no answer |
+| Per-key rate limiting | **done** — stick-table per key: 200 req/10 s compliance, 50 req/10 s forensics, one heavy request in flight per key; 429 with Retry-After |
+| Method allowlist | **done** — `admin_`/`personal_`/`miner_`/`txpool_`/`debug_set*` refused for everyone; `debug_`/`trace_` only for the forensics tier |
 | Method-class routing | **done** — trace/debug isolated from point reads |
 | Backend health & failover | **done** |
 
@@ -224,8 +224,8 @@ divergence, a replica failing health checks.
 | Self-monitoring & alert delivery | **done** |
 | Predictive disk alerting | **done** |
 | **HA — multiple archive replicas** | **missing (single node today)** |
-| **Edge tier — TLS, auth, per-key limit, WAF** | **missing** |
-| **Method allowlist at the gateway** | **missing** |
+| **Edge tier — TLS, WAF, global limit** | **missing** (auth and per-key limits now live in the inner gateway) |
+| **Method allowlist at the gateway** | **done** |
 | **Snapshot backup & rehearsed restore** | **missing** |
 | **Rolling/canary upgrade process** | **missing** |
 | Caching layer for immutable reads | **missing** |
