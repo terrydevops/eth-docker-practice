@@ -96,6 +96,23 @@ groups:
         expr: (1 - slo:rpc_availability:ratio_rate1h) / (1 - 0.999)
       - record: slo:rpc_error_budget_burn:rate6h
         expr: (1 - slo:rpc_availability:ratio_rate6h) / (1 - 0.999)
+      # 30-day ledger: burn rates say how fast the budget goes, these say
+      # how much is left. request-weighted over the raw counters so a
+      # prober restart or an uneven probe rate does not skew it.
+      - record: slo:rpc_availability:ratio_30d
+        expr: >
+          sum(increase(rpc_probe_requests_total{class="point",outcome="success"}[30d]))
+          /
+          clamp_min(sum(increase(rpc_probe_requests_total{class="point"}[30d])), 1)
+      # fraction of the 30-day budget spent, 1.0 = exhausted
+      - record: slo:rpc_error_budget_consumed:30d
+        expr: (1 - slo:rpc_availability:ratio_30d) / (1 - 0.999)
+      - record: slo:rpc_error_budget_remaining:30d
+        expr: 1 - slo:rpc_error_budget_consumed:30d
+      # failed probe time in minutes (one probe per POINT_INTERVAL_MS tick,
+      # see prober.mjs); consumed * 43.2 would extrapolate a partial window
+      - record: slo:rpc_error_budget_failed_minutes:30d
+        expr: sum(increase(rpc_probe_requests_total{class="point",outcome="error"}[30d])) * 3 / 60
 
   # ---- staking SLO: attestation effectiveness >= 99% -----------------------
   # SLI 1 (source of truth): the chain's own participation accounting -
