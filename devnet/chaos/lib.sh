@@ -13,6 +13,8 @@ HAPROXY_STATS=${HAPROXY_STATS:-http://localhost:8406/;csv}
 PUMBA_IMAGE=${PUMBA_IMAGE:-gaiaadm/pumba:1.2.1}
 TC_IMAGE=${TC_IMAGE:-gaiadocker/iproute2}
 SAMPLE=${SAMPLE:-15}
+# the gateway wants an x-api-key; the harness runs as the prober tenant
+GATEWAY_API_KEY=${GATEWAY_API_KEY:-$(grep '^GATEWAY_KEY_PROBER=' "$(dirname "${BASH_SOURCE[0]}")/../.env" 2>/dev/null | cut -d= -f2)}
 
 log() { printf '%s  %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 
@@ -22,8 +24,8 @@ q() {
     | python3 -c 'import sys,json;r=json.load(sys.stdin)["data"]["result"];print(r[0]["value"][1] if r else "")'
 }
 
-head_of() { # rpc url -> block number
-  curl -s -m 5 -X POST -H 'content-type: application/json' \
+head_of() { # rpc url -> block number (the key is ignored by the nodes, required by the gateway)
+  curl -s -m 5 -X POST -H 'content-type: application/json' -H "x-api-key: $GATEWAY_API_KEY" \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' "$1" \
     | python3 -c 'import sys,json
 try: print(int(json.load(sys.stdin)["result"],16))

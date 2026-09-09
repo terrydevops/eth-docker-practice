@@ -72,6 +72,7 @@ annotate "sigkill geth x$KILLS"
 printf 'kill\thead\tdetect_s\trestart_s\trecover_s\tunclean\trewound\n' > "$out/kills.tsv"
 
 ms() { python3 -c 'import time;print(int(time.time()*1000))'; }
+sec() { [ -n "$1" ] && printf '%.1f' "$(python3 -c "print(($1-$t_kill)/1000)")" || printf 'none'; }
 for n in $(seq 1 "$KILLS"); do
   # wait for the next block to land, then kill inside the flush window
   h0=$(head_of "$GETH_RPC"); h=$h0; i=0
@@ -103,12 +104,12 @@ for n in $(seq 1 "$KILLS"); do
   done
   if [ "$NO_RESTART" = 1 ]; then
     log "  alerts while down: $(alerts)"; docker start geth >/dev/null; log "  geth started after ${RECOVER_MAX}s ($ip_before -> $(ip_of geth))"
-    i=0; until [ "$(geth1_state)" = "UP 100" ] && [ "$(geth1_check)" = L7OK ] || [ $i -ge 60 ]; do sleep 1; i=$((i+1)); done
+    i=0; until [ "$(geth1_state)" = "UP 100" ] && [ "$(geth1_check)" = L7OK ] || [ $i -ge 60 ]; do
+      [ -z "$t_http" ] && [ -n "$(head_of "$GETH_RPC")" ] && t_http=$(ms); sleep 1; i=$((i+1)); done
     t_up=$(ms); log "  back in rotation $(sec "$t_up")s after the kill"
   fi
   unclean=$(docker logs geth --since "$(( (t_kill/1000) - 1 ))" 2>&1 | grep -c 'Unclean shutdown' || true)
   rewound=$(docker logs geth --since "$(( (t_kill/1000) - 1 ))" 2>&1 | grep -iE 'rewound|rewind|repair|head state missing' | head -1 | sed 's/^.*\] //' || true)
-  sec() { [ -n "$1" ] && printf '%.1f' "$(python3 -c "print(($1-$t_kill)/1000)")" || printf 'none'; }
   if [ "$never_down" = 1 ]; then d="never left rotation"; r="0"; else d="$(sec "$t_down")"; r="$(sec "$t_up")"; fi
   log "  detect ${d}s  rpc back $(sec "$t_http")s  recovered ${r}s  unclean=$unclean  ${rewound:-no rewind line}"
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$n" "$h" "$d" "$(sec "$t_http")" "$r" "$unclean" "${rewound:--}" >> "$out/kills.tsv"

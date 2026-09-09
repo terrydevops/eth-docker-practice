@@ -58,3 +58,13 @@ logs:
 ## play the three gateway tenants for a minute (Serving Layer dashboard)
 demo-tenants:
 	./scripts/demo-tenants.sh 60
+
+## fault injection (devnet/chaos, see docs/demo-commands.md)
+chaos-partition:
+	DURATION=$${DURATION:-30s} RECOVER=$${RECOVER:-90s} ./chaos/partition.sh
+
+chaos-sigkill:
+	./chaos/sigkill.sh
+
+chaos-stop:
+	./chaos/stop.sh
