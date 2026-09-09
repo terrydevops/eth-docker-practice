@@ -1,6 +1,36 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "iconColor": "red",
+        "name": "chaos",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "chaos"
+          ],
+          "matchAny": true,
+          "limit": 100
+        }
+      }
+    ]
   },
   "editable": true,
   "graphTooltip": 1,
@@ -24,12 +54,273 @@
   "panels": [
     {
       "type": "row",
-      "title": "1 - Archive RPC SLO (external service contract)  |  availability >= 99.9% | point p95 <= 300ms | trace p95 <= 10s",
+      "title": "0 - Error Budget (30 days)  |  0.1% of 30 days = 43.2 min",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Budget Remaining",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.25
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "min": -1,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "slo:rpc_error_budget_remaining:30d"
+        }
+      ],
+      "description": "Share of the 43.2-minute budget not yet spent: 1 - failed minutes / 43.2. 100% means no failed probe in the window. Negative means over budget."
+    },
+    {
+      "type": "stat",
+      "title": "Budget Spent (min)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 21.6
+              },
+              {
+                "color": "red",
+                "value": 43.2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "slo:rpc_error_budget_failed_minutes:30d"
+        }
+      ],
+      "description": "Failed probe time over the last 30 days, in minutes. The budget is 43.2 min (0.1% of 30 days). One probe every 3s, so each failed probe costs 3s."
+    },
+    {
+      "type": "stat",
+      "title": "Availability (30d)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.995
+              },
+              {
+                "color": "green",
+                "value": 0.999
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "slo:rpc_availability:ratio_30d"
+        }
+      ],
+      "description": "Point-read probes that succeeded over the last 30 days, against the 99.9% objective. This is the window the SLO is promised over. Early in a window it is dominated by the data collected so far."
+    },
+    {
+      "type": "timeseries",
+      "title": "Budget Spent (min)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 21.6
+              },
+              {
+                "color": "red",
+                "value": 43.2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "slo:rpc_error_budget_failed_minutes:30d",
+          "legendFormat": "spent"
+        }
+      ],
+      "description": "Failed probe time over the last 30 days, in minutes. The budget is 43.2 min (0.1% of 30 days). One probe every 3s, so each failed probe costs 3s."
+    },
+    {
+      "type": "row",
+      "title": "1 - Archive RPC SLO (external service contract)  |  availability >= 99.9% | point p95 <= 300ms | trace p95 <= 10s",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
       },
       "collapsed": false,
       "panels": []
@@ -45,7 +336,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -93,7 +384,8 @@
           },
           "expr": "slo:rpc_availability:ratio_rate5m"
         }
-      ]
+      ],
+      "description": "Point-read probes succeeding in the last 5 minutes. Probes go through the gateway to random historical heights. Short window: fast but noisy."
     },
     {
       "type": "stat",
@@ -106,7 +398,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -154,12 +446,13 @@
           },
           "expr": "slo:rpc_availability:ratio_rate1h"
         }
-      ]
+      ],
+      "description": "Same as the 5m panel over the last hour. The fast-burn page needs both windows over the line."
     },
     {
       "type": "stat",
       "title": "Budget Burn (5m)",
-      "description": "1.0 = exactly on budget. >14.4 sustained pages.",
+      "description": "How fast the budget is being spent, as a multiple of the sustainable rate. 1.0 = exactly on budget. Sustained >14.4 on both 5m and 1h pages.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -168,7 +461,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -219,7 +512,7 @@
     {
       "type": "stat",
       "title": "Correctness",
-      "description": "Cross-client block-hash diff + genesis balance invariant. 0 pages immediately.",
+      "description": "Two checks every 15s: the block hash at head-16 must match besu, and the genesis balance must equal the known value. 0 = diverged, pages immediately. Holds the last value while it cannot check.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -228,7 +521,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -296,7 +589,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -342,7 +635,8 @@
           },
           "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"point\"}[10m])))"
         }
-      ]
+      ],
+      "description": "95th percentile latency of eth_getBalance at random historical heights, last 10 minutes. Objective 300ms."
     },
     {
       "type": "stat",
@@ -355,7 +649,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 1
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -401,12 +695,13 @@
           },
           "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))"
         }
-      ]
+      ],
+      "description": "95th percentile latency of debug_traceBlockByNumber on the heavy pool, last 10 minutes. Objective 10s."
     },
     {
       "type": "timeseries",
       "title": "Error Budget Burn Rate",
-      "description": "Multi-window burn. Page line at 14.4, ticket line at 6.",
+      "description": "Burn rate on the 5m and 1h windows. Page line at 14.4 (budget gone in about two days), ticket line at 6 (about a week).",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -415,7 +710,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 17
       },
       "fieldConfig": {
         "defaults": {
@@ -488,7 +783,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 17
       },
       "fieldConfig": {
         "defaults": {
@@ -553,7 +848,8 @@
           "expr": "sum by (outcome) (rate(rpc_probe_requests_total{class=\"point\"}[5m]))",
           "legendFormat": "{{outcome}}"
         }
-      ]
+      ],
+      "description": "Point-read probes per second by outcome. Errors here are what spend the budget."
     },
     {
       "type": "timeseries",
@@ -566,7 +862,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 25
       },
       "fieldConfig": {
         "defaults": {
@@ -606,7 +902,8 @@
           "expr": "histogram_quantile(0.95, sum by (le) (rate(rpc_probe_duration_seconds_bucket{class=\"trace\"}[10m])))",
           "legendFormat": "trace p95"
         }
-      ]
+      ],
+      "description": "p95 per method class. Includes failed requests, so a burst of fast 503s makes this look better, not worse."
     },
     {
       "type": "timeseries",
@@ -619,7 +916,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 25
       },
       "fieldConfig": {
         "defaults": {
@@ -669,7 +966,8 @@
           "expr": "sum by (code) (rate(haproxy_backend_http_responses_total{proxy=~\"archive_.+\"}[5m]))",
           "legendFormat": "{{code}}"
         }
-      ]
+      ],
+      "description": "haproxy responses on the archive backends by status class. 5xx with no backend up is what an outage looks like from the client side."
     },
     {
       "type": "row",
@@ -678,7 +976,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 34
       },
       "panels": []
     },
@@ -689,7 +987,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 35
       },
       "options": {
         "mode": "markdown",
@@ -707,7 +1005,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 25
+        "y": 37
       },
       "options": {
         "colorMode": "value",
@@ -756,7 +1054,7 @@
           "expr": "slo:engine_success:ratio_rate5m:validating"
         }
       ],
-      "description": "teku to besu"
+      "description": "teku to besu engine calls (forkchoiceUpdated, newPayload) that succeeded, last 5 minutes."
     },
     {
       "type": "stat",
@@ -769,7 +1067,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 25
+        "y": 37
       },
       "options": {
         "colorMode": "value",
@@ -817,7 +1115,8 @@
           },
           "expr": "slo:engine_budget_burn:rate5m:validating"
         }
-      ]
+      ],
+      "description": "Burn rate of the validating pair against the 99.9% engine target. 1.0 = on budget."
     },
     {
       "type": "stat",
@@ -830,7 +1129,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 25
+        "y": 37
       },
       "options": {
         "colorMode": "value",
@@ -879,7 +1178,7 @@
           "expr": "slo:engine_success:ratio_rate5m:archive"
         }
       ],
-      "description": "lighthouse to geth"
+      "description": "lighthouse to geth engine calls with payload status valid, last 5 minutes."
     },
     {
       "type": "stat",
@@ -892,7 +1191,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 25
+        "y": 37
       },
       "options": {
         "colorMode": "value",
@@ -940,7 +1239,8 @@
           },
           "expr": "slo:engine_budget_burn:rate5m:archive"
         }
-      ]
+      ],
+      "description": "Burn rate of the archive pair against the 99.9% engine target. 1.0 = on budget."
     },
     {
       "type": "timeseries",
@@ -953,7 +1253,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -980,7 +1280,8 @@
           "expr": "slo:engine_success:ratio_rate5m:archive",
           "legendFormat": "archive (lighthouse to geth)"
         }
-      ]
+      ],
+      "description": "Both pairs side by side. Different client metrics, same objective. A drop on one pair only points at that pair's CL-EL link."
     },
     {
       "type": "timeseries",
@@ -993,7 +1294,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 41
       },
       "fieldConfig": {
         "defaults": {
@@ -1020,7 +1321,8 @@
           "expr": "slo:engine_budget_burn:rate5m:archive",
           "legendFormat": "archive"
         }
-      ]
+      ],
+      "description": "Burn rate per pair. Sustained >14.4 on 5m and 1h pages for that pair."
     },
     {
       "type": "row",
@@ -1029,7 +1331,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 48
       },
       "panels": []
     },
@@ -1040,7 +1342,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 49
       },
       "options": {
         "mode": "markdown",
@@ -1058,7 +1360,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 39
+        "y": 51
       },
       "options": {
         "colorMode": "value",
@@ -1106,7 +1408,8 @@
           },
           "expr": "slo:staking_participation:ratio"
         }
-      ]
+      ],
+      "description": "Gwei attesting to the correct target last epoch over active gwei, from the chain's own accounting. Covers every validator on both VCs."
     },
     {
       "type": "stat",
@@ -1119,7 +1422,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 39
+        "y": 51
       },
       "options": {
         "colorMode": "value",
@@ -1167,7 +1470,8 @@
           },
           "expr": "slo:staking_effectiveness_burn:rate5m"
         }
-      ]
+      ],
+      "description": "Burn rate against the 1% budget of the 99% target. At 66 validators one silent validator is about 1.5x."
     },
     {
       "type": "timeseries",
@@ -1180,7 +1484,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 51
       },
       "fieldConfig": {
         "defaults": {
@@ -1216,7 +1520,8 @@
           "expr": "slo:staking_effectiveness_burn:rate6h",
           "legendFormat": "6h"
         }
-      ]
+      ],
+      "description": "Multi-window burn for the staking SLO. Page >14.4 on 5m and 1h, ticket >6 on 30m and 6h."
     }
   ]
 }

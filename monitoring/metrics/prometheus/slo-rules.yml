@@ -107,12 +107,14 @@ groups:
       # fraction of the 30-day budget spent, 1.0 = exhausted
       - record: slo:rpc_error_budget_consumed:30d
         expr: (1 - slo:rpc_availability:ratio_30d) / (1 - 0.999)
+      # remaining is in minutes of the 43.2-minute budget, not the ratio form:
+      # early in a window the ratio scales a few failed minutes to a month
       - record: slo:rpc_error_budget_remaining:30d
-        expr: 1 - slo:rpc_error_budget_consumed:30d
+        expr: 1 - slo:rpc_error_budget_failed_minutes:30d / (30 * 24 * 60 * (1 - 0.999))
       # failed probe time in minutes (one probe per POINT_INTERVAL_MS tick,
       # see prober.mjs); consumed * 43.2 would extrapolate a partial window
       - record: slo:rpc_error_budget_failed_minutes:30d
-        expr: sum(increase(rpc_probe_requests_total{class="point",outcome="error"}[30d])) * 3 / 60
+        expr: (sum(increase(rpc_probe_requests_total{class="point",outcome="error"}[30d])) or vector(0)) * 3 / 60
 
   # ---- staking SLO: attestation effectiveness >= 99% -----------------------
   # SLI 1 (source of truth): the chain's own participation accounting -
