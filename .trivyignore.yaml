@@ -34,3 +34,10 @@ vulnerabilities:
   - id: CVE-2026-31789
     statement: 32-bit only; mev-boost is not deployed by the devnet
     expired_at: 2026-11-08
+  # Bouncy Castle name-constraints bypass in X.509 path validation (bcprov 1.84, fixed in
+  # 1.85). Only reachable when validating a certificate chain, and besu and web3signer run
+  # without TLS here. teku moved to 26.9.1, which has the fix; besu 26.9.0 and web3signer
+  # 26.7.0 (the newest releases on 2026-09-28) still ship 1.84.
+  - id: CVE-2026-8763
+    statement: X.509 name constraints only; besu and web3signer run without TLS. re-scan at expiry
+    expired_at: 2026-11-08
