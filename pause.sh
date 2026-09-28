@@ -11,6 +11,14 @@
 #
 # Scope: only containers labelled with compose project "devnet". Other
 # stacks on this machine (w3craft, waoowaoo, ...) are never touched.
+#
+# After a pause of days the validating pair (teku + besu) picks up at the
+# current slot, but lighthouse has to walk the empty slots from its old head
+# in 64-slot batches, about 18 a minute (roughly 6 minutes per day paused),
+# with the archive geth idle until it catches up. Wiping lighthouse-data and
+# starting it with --checkpoint-sync-url=http://teku:5051 is the fast path.
+# geth stops itself once the Docker disk has less than 2 GB free: check
+# `docker system df` before resuming a stack that shares the disk with others.
 
 set -euo pipefail
 
