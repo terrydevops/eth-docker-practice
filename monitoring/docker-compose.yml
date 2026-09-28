@@ -83,7 +83,7 @@ services:
       # positions survive a recreate, otherwise every log is re-read from the start
       - promtail-positions:/positions
     depends_on: [loki]
-    mem_limit: 128m
+    mem_limit: 256m   # 118 of 128 MiB after a resume with a day of logs to catch up on
 
   # machine monitoring: host cpu/mem/disk/net/filesystem
   node-exporter:
