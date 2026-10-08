@@ -215,6 +215,7 @@ services:
         --execution-jwt=/jwt/pair-b.hex
         --validator-monitor-auto
         --datadir=/data
+        --checkpoint-sync-url=http://teku:5051
         --ignore-ws-check
         --port=9000
         --disable-upnp
