@@ -124,6 +124,13 @@ services:
     container_name: geth
     environment:
       - BESU_ENODE=${BESU_ENODE}
+    # geth raises its fd soft limit to the hard limit at start and exits if
+    # that fails. the docker default (1048576) is above fs.nr_open on a host
+    # tuned for other workloads, where the raise is refused - pin it instead.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     # two devnet-specific fixes before geth starts:
     #  --nat extip: without it geth advertises 127.0.0.1 and besu drops a peer
     #    announcing a loopback endpoint.
