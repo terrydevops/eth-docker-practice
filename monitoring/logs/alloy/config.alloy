@@ -1,0 +1,54 @@
+logging {
+  level = "warn"
+}
+
+// auto-discover containers on this host and tail their logs. scoped to this
+// environment's docker network (NET_NAME) so a shared host only ingests this
+// stack's containers, not unrelated ones.
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  // keep only containers attached to this environment's network
+  rule {
+    source_labels = ["__meta_docker_container_network_mode"]
+    regex         = ".*" + sys.env("NET_NAME") + ".*"
+    action        = "keep"
+  }
+
+  // container name -> label "container"
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // compose service -> label "service"
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // compose project -> label "project"
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}
+
+loki.source.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.relabel.containers.output
+  refresh_interval = "5s"
+  forward_to       = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

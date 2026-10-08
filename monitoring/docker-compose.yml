@@ -1,6 +1,6 @@
-# shared monitoring: metrics (prometheus + grafana) + logs (loki + promtail).
+# shared monitoring: metrics (prometheus + grafana) + logs (loki + alloy).
 # included by each environment via COMPOSE_FILE; joins that environment's
-# network so prometheus can reach the node containers by name and promtail
+# network so prometheus can reach the node containers by name and alloy
 # can tail their logs.
 
 services:
@@ -70,20 +70,25 @@ services:
       - loki-data:/loki
     mem_limit: 512m
 
-  promtail:
-    image: "${PROMTAIL_IMAGE:-grafana/promtail:3.6.11}"
-    container_name: promtail
+  alloy:
+    image: "${ALLOY_IMAGE:-grafana/alloy:v1.20.1}"
+    container_name: alloy
     restart: unless-stopped
-    command: -config.file=/etc/promtail/promtail-config.yml -config.expand-env=true
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
     environment:
       - NET_NAME=${NET_NAME:-}
     volumes:
-      - ../monitoring/logs/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - ../monitoring/logs/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # positions survive a recreate, otherwise every log is re-read from the start
-      - promtail-positions:/positions
+      - alloy-data:/var/lib/alloy/data
     depends_on: [loki]
-    mem_limit: 256m   # 118 of 128 MiB after a resume with a day of logs to catch up on
+    mem_limit: 256m
 
   # machine monitoring: host cpu/mem/disk/net/filesystem
   node-exporter:
@@ -124,6 +129,6 @@ services:
 
 volumes:
   alertmanager-data:
+  alloy-data:
   loki-data:
   prometheus-data:
-  promtail-positions:

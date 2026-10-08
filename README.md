@@ -99,8 +99,8 @@ line - and the fifth layer is the monitoring watching itself:
 | chain | Prometheus | besu, teku, geth, lighthouse, prysm-validator, remote-vc, web3signer |
 | machine | node-exporter | host cpu, memory, disk, filesystem, network |
 | container | cAdvisor | per-container cpu / memory / network |
-| logs | Loki + Promtail | every container's stdout/stderr, searchable in Grafana |
-| meta | Prometheus | prometheus, alertmanager, grafana, loki, promtail scrape themselves |
+| logs | Loki + Alloy | every container's stdout/stderr, searchable in Grafana |
+| meta | Prometheus | prometheus, alertmanager, grafana, loki, alloy scrape themselves |
 
 - Grafana: http://localhost:3001 (anonymous viewer; folders: Clients,
   Clients/Lighthouse, Devnet, Machine, Containers, Monitoring, Logs). ~30
@@ -114,7 +114,7 @@ line - and the fifth layer is the monitoring watching itself:
   inhibition so a down node's downstream symptoms stay quiet. Delivery lands
   in a local webhook sink (a real workspace is one config line away); the
   sink exports counters so the delivery path itself is alertable.
-- Loki has no host port; Grafana reads it internally. Promtail is scoped to
+- Loki has no host port; Grafana reads it internally. Alloy is scoped to
   this stack's network, so it ignores unrelated containers.
 
 Each client gets alerts tuned to its own runtime rather than one generic
@@ -289,7 +289,7 @@ network's config. All images are pinned.
 | mev-boost/ | mev sidecar |
 | devnet/ | the local network above |
 | holesky-network/, mainnet/ | the same components against public networks |
-| monitoring/ | metrics (prometheus + exporters), logs (loki + promtail), grafana |
+| monitoring/ | metrics (prometheus + exporters), logs (loki + alloy), grafana |
 | docs/ | day-2 runbook |
 
 Design points:

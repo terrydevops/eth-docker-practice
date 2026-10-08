@@ -61,9 +61,9 @@ scrape_configs:
   - job_name: loki
     static_configs:
       - targets: ['loki:3100']
-  - job_name: promtail
+  - job_name: alloy
     static_configs:
-      - targets: ['promtail:9080']
+      - targets: ['alloy:12345']
 
   # rpc gateway (SLO measurement point) + synthetic prober
   - job_name: gateway

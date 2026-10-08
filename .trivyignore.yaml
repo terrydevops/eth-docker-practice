@@ -3,7 +3,7 @@
 vulnerabilities:
   # x/crypto/ssh server-side bypass. The fix (0.55.0) is newer than every
   # vendor build in use (prometheus, alertmanager, node-exporter, grafana
-  # plugins, promtail, geth, mev-boost). Nothing here runs an SSH server.
+  # plugins, geth, mev-boost). Nothing here runs an SSH server.
   - id: CVE-2026-56854
     statement: ssh server only, no image runs one; re-scan at expiry
     expired_at: 2026-10-09

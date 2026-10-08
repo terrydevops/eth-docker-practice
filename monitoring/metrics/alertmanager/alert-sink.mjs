@@ -2,7 +2,7 @@
 //
 // A real deployment ships to Slack/PagerDuty; on a practice devnet those are
 // not available, so this stands in: it logs every notification (picked up by
-// promtail into loki, so alert history is queryable next to node logs) and
+// alloy into loki, so alert history is queryable next to node logs) and
 // exposes counters, which lets prometheus alert on its own delivery path
 // going quiet.
 
