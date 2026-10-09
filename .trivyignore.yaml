@@ -25,11 +25,12 @@ vulnerabilities:
     expired_at: 2026-11-08
   # netty SNI routing bypass on a fragmented TLS ClientHello. Only reachable
   # through SslClientHelloHandler, i.e. with TLS enabled; web3signer and teku
-  # run with TLS off here. No release with netty >= 4.2.17 yet (advisory
-  # 2026-08-19, newest web3signer 26.7.0 is from 2026-08-11).
+  # run with TLS off here. web3signer 26.9.0 (2026-09-30) ships netty 4.2.17;
+  # teku 26.10.0 (2026-10-08) is not checked yet. Both are upgrades of the
+  # signing path and the validating CL, to be done and soaked together.
   - id: CVE-2026-75595
-    statement: TLS SNI handler only; web3signer and teku run without TLS. re-scan at expiry
-    expired_at: 2026-10-09
+    statement: TLS SNI handler only; web3signer and teku run without TLS. upgrade both before expiry
+    expired_at: 2026-11-08
   # openssl, 32-bit only; left in mev-boost 1.12 (newest, not part of the devnet)
   - id: CVE-2026-31789
     statement: 32-bit only; mev-boost is not deployed by the devnet
