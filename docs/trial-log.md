@@ -244,6 +244,31 @@ The last three need a clean 1h window for the page result to count;
 Disk-full: designed (bounded 2.5 GB loop volume, instant vs slow fill,
 geth's minfreedisk self-shutdown), not run; parked for time.
 
+**2026-09-09 11:30 UTC, a 25 s partition that did not heal.** While
+rehearsing the demo a 25-second cut was stopped early; the netem was gone
+within a second, and the archive stayed behind for 14 minutes. Diagnosis:
+lighthouse still held one inbound connection from teku and logged
+"Synced, peers 1", while teku reported zero peers. The cut had let teku's
+side time out and close, the close never reached lighthouse, and
+lighthouse kept a half-open connection it believed was a peer, so it
+neither searched nor received gossip. Restarting lighthouse, with or
+without a direct dial address for teku, did not reconnect within 90 s;
+restarting teku reconnected in 11 s and geth caught up at once. This is
+the mechanism behind the four-minute recovery in the 10-minute run, and
+it is not about backoff: it is asymmetric connection teardown after a
+partition. The demo stop script now escalates to a teku restart after
+60 s. Before a customer: libp2p keepalive and idle timeouts on the CL, or
+a peer-health watchdog that drops a peer that delivers no gossip for N
+slots. Cost of this rehearsal: about 15 min of budget.
+
+**2026-09-09 11:53-11:58 UTC, demo flow rehearsed end to end** as written
+in `docs/demo-commands.md`: pre-check, kill with restart (0.6 s / 4.7 s,
+no budget), kill onto a new address (13.9 s, 0.15 min), kill with nobody
+restarting for 60 s (page pending within the minute, 69 s to rotation,
+1.0 min), stop, acceptance test (16 pass), tenant traffic. The kill
+commands carry ALLOW_DIRTY_WINDOW=1 so they run back to back; the
+partition is shown from the recorded window rather than live.
+
 ## 5b. Direction 2: the serving layer
 
 The ops plan listed per-key authentication, per-key rate limiting and a
@@ -299,6 +324,26 @@ gateway totals, keys seen and heavy-pool occupancy against its cap
 minute so the columns light up during the talk: compliance reads and
 occasionally tries a trace (403), forensics traces and bursts past its
 limit (429), a keyless client keeps knocking (401).
+
+## 5c. Direction 3: state growth and query cost
+
+Time-boxed to what the existing metrics can show. A fourth board,
+`Devnet - State Growth`, charts geth's storage from its own counters:
+live pebble size and the ancient freezer, bytes per block, growth rate
+next to blocks per hour, read latency p50/p95 by method class from the
+prober, the pebble block-cache hit ratio, account and storage reads per
+second, compaction time and disk I/O, and a days-to-full projection on
+the VM disk (the same one the disk alert uses). The extrapolation panel
+says what these numbers are and are not: the devnet's blocks are empty,
+so bytes per block is a floor and the live size is dominated by
+compaction; the cache hit ratio is about 0.7 even at a few hundred
+megabytes, and the latency curve stays flat because the state fits in
+memory. The load generator (a contract writing a configurable number of
+slots per transaction, plus deploys and transfers) is designed and not
+built; it is what would turn bytes per block into bytes per write and
+push the state past memory. Public reference points, not measured here:
+a hash-scheme geth archive is about 20 TB and grows 2-3 TB a year;
+flat-storage archives are 2-3 TB.
 
 ## 6. Open questions for the team
 
