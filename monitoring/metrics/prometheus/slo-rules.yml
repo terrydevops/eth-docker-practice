@@ -96,14 +96,42 @@ groups:
         expr: (1 - slo:rpc_availability:ratio_rate1h) / (1 - 0.999)
       - record: slo:rpc_error_budget_burn:rate6h
         expr: (1 - slo:rpc_availability:ratio_rate6h) / (1 - 0.999)
+      # maintenance windows: the stack runs on a laptop and was stopped and
+      # resumed several times. the prober stays up while the nodes are down or
+      # catching up, so those hours would count as failed. each line is the
+      # probe count inside one window (range = length, @ = end, unix seconds);
+      # the guard drops a line once its window has left the 30 days.
+      # injected faults are not listed here: they are meant to spend budget.
+      #   w1  2026-09-17 07:00-13:00 UTC   resume after a stop
+      #   w2  2026-09-27 10:00 - 09-28 09:00 UTC   resume after a 2-week pause
+      #   w3  2026-10-07 13:00 - 10-08 13:00 UTC   log pipeline and geth changes
+      #   w4  2026-10-08 23:00 - 10-09 03:00 UTC   two Docker restarts
+      - record: slo:rpc_probe_maintenance:increase
+        expr: >
+          sum by (outcome) (
+            label_replace(increase(rpc_probe_requests_total{class="point"}[6h] @ 1789650000)
+              and on() (vector(time()) < 1789628400 + 30 * 86400), "window", "w1", "", "")
+            or
+            label_replace(increase(rpc_probe_requests_total{class="point"}[23h] @ 1790586000)
+              and on() (vector(time()) < 1790503200 + 30 * 86400), "window", "w2", "", "")
+            or
+            label_replace(increase(rpc_probe_requests_total{class="point"}[24h] @ 1791464400)
+              and on() (vector(time()) < 1791378000 + 30 * 86400), "window", "w3", "", "")
+            or
+            label_replace(increase(rpc_probe_requests_total{class="point"}[4h] @ 1791514800)
+              and on() (vector(time()) < 1791500400 + 30 * 86400), "window", "w4", "", "")
+          )
       # 30-day ledger: burn rates say how fast the budget goes, these say
       # how much is left. request-weighted over the raw counters so a
       # prober restart or an uneven probe rate does not skew it.
+      # maintenance windows are taken out of both sides.
       - record: slo:rpc_availability:ratio_30d
         expr: >
-          sum(increase(rpc_probe_requests_total{class="point",outcome="success"}[30d]))
+          (sum(increase(rpc_probe_requests_total{class="point",outcome="success"}[30d]))
+            - (sum(slo:rpc_probe_maintenance:increase{outcome="success"}) or vector(0)))
           /
-          clamp_min(sum(increase(rpc_probe_requests_total{class="point"}[30d])), 1)
+          clamp_min(sum(increase(rpc_probe_requests_total{class="point"}[30d]))
+            - (sum(slo:rpc_probe_maintenance:increase) or vector(0)), 1)
       # fraction of the 30-day budget spent, 1.0 = exhausted
       - record: slo:rpc_error_budget_consumed:30d
         expr: (1 - slo:rpc_availability:ratio_30d) / (1 - 0.999)
@@ -114,7 +142,10 @@ groups:
       # failed probe time in minutes (one probe per POINT_INTERVAL_MS tick,
       # see prober.mjs); consumed * 43.2 would extrapolate a partial window
       - record: slo:rpc_error_budget_failed_minutes:30d
-        expr: (sum(increase(rpc_probe_requests_total{class="point",outcome="error"}[30d])) or vector(0)) * 3 / 60
+        expr: >
+          clamp_min(
+            (sum(increase(rpc_probe_requests_total{class="point",outcome="error"}[30d])) or vector(0))
+            - (sum(slo:rpc_probe_maintenance:increase{outcome="error"}) or vector(0)), 0) * 3 / 60
 
   # ---- staking SLO: attestation effectiveness >= 99% -----------------------
   # SLI 1 (source of truth): the chain's own participation accounting -
