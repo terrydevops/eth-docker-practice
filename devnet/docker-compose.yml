@@ -3,7 +3,7 @@
 #   pair A (validating): besu + teku (64 interop validators in-process)
 #   pair B (archive):    geth --gcmode=archive + lighthouse
 #
-# pairs peer over EL p2p (besu is the bootnode) and CL p2p (teku static-dials
+# pairs peer over EL p2p (besu is the bootnode) and CL p2p (teku direct-peers with
 # lighthouse's pre-generated identity and keeps retrying; the ENR sidecar is
 # the secondary path). client diversity across pairs is deliberate: a
 # consensus bug in one client cannot take out both.
@@ -83,7 +83,10 @@ services:
       - --rest-api-interface=0.0.0.0
       - --rest-api-host-allowlist=*
       - --p2p-port=9000
-      - --p2p-static-peers=${LIGHTHOUSE_MULTIADDR}
+      # lighthouse lists teku in --trusted-peers, which makes it a gossipsub
+      # direct peer and rejects teku's GRAFTs. direct peering only works when
+      # both sides set it; otherwise teku->lighthouse blocks depend on scoring.
+      - --p2p-direct-peers=${LIGHTHOUSE_MULTIADDR}
       - --metrics-enabled=true
       - --metrics-interface=0.0.0.0
       - --metrics-host-allowlist=*
