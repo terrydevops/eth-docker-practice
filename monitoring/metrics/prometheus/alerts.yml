@@ -128,6 +128,36 @@ groups:
         annotations:
           summary: "finalized epoch has not advanced in 15 minutes"
 
+      # lighthouse is connected but blocks are not reaching it over gossip, so
+      # it only catches up by range sync and the archive pair trails the head.
+      # teku proposes every slot here, so a healthy ratio is ~1. peer count
+      # stays at 1 the whole time, which is why CLPeersZero alone misses it
+      - alert: LighthouseGossipBlocksMissing
+        expr: >
+          sum(increase(gossipsub_topic_msg_recv_counts_total{job="lighthouse",hash=~".*/beacon_block/.*"}[10m]))
+          /
+          clamp_min(max(delta(slotclock_present_slot{job="lighthouse"}[10m])), 1)
+          < 0.5
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "lighthouse received {{ $value | humanizePercentage }} of blocks over gossip in 10 minutes"
+          description: "check teku logs for 'Failed to publish beacon_block'; teku and lighthouse must be direct peers on both sides"
+
+      # a CL node with no peer is isolated. lighthouse's libp2p_peers reads 0
+      # even when connected (v8.2), so use its beacon_block topic peers instead
+      - alert: CLPeersZero
+        expr: >
+          label_replace(libp2p_peers{job="teku"}, "node", "teku", "", "") == 0
+          or
+          label_replace(max(gossipsub_topic_peers_counts{job="lighthouse",hash=~".*/beacon_block/.*"}), "node", "lighthouse", "", "") == 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $labels.node }} has no consensus-layer peer"
+
   # ---- teku, the java consensus client ------------------------------------
   # like besu, teku is a JVM client, so GC pauses are its way of missing slot
   # deadlines. it also owns the engine API to besu - the link that feeds it
