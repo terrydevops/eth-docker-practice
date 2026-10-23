@@ -46,6 +46,14 @@ jobs:
           -v "$PWD/monitoring/metrics/prometheus:/p:ro"
           prom/prometheus:v3.14.0@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
           check rules /p/alerts.yml /p/slo-rules.yml
+      - name: prometheus rule tests
+        run: >
+          docker run --rm --entrypoint sh
+          -v "$PWD/monitoring/metrics/prometheus:/p:ro"
+          prom/prometheus:v3.14.0@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
+          -c 'promtool test rules /p/tests/*.yml'
+      - name: english only, no attribution
+        run: .github/scripts/hygiene.sh
       - name: compose files render
         run: .github/scripts/compose-config.sh
       - name: image references are pinned

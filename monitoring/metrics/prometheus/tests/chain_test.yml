@@ -1,0 +1,131 @@
+# promtool test rules monitoring/metrics/prometheus/tests/*.yml
+# each alert gets a case that should fire and one that should not
+rule_files:
+  - ../alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # teku stops being scraped; geth down is ArchiveNodeDown's job, not this one
+  - interval: 1m
+    input_series:
+      - series: 'up{job="teku"}'
+        values: '1 1 0x10'
+      - series: 'up{job="geth"}'
+        values: '0x12'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: NodeDown
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: NodeDown
+        exp_alerts:
+          - exp_labels: {severity: page, job: teku}
+            exp_annotations:
+              summary: "node process teku is not being scraped"
+
+  - interval: 1m
+    input_series:
+      - series: 'ethereum_blockchain_height{job="besu"}'
+        values: '100+1x5 105x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ChainStalled
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: ChainStalled
+        exp_alerts:
+          - exp_labels: {severity: page, job: besu}
+            exp_annotations:
+              summary: "validating node head has not advanced in 2 minutes"
+
+  # finality stops at epoch 110 at minute 10
+  - interval: 1m
+    input_series:
+      - series: 'beacon_finalized_epoch{job="teku"}'
+        values: '100+1x10 110x30'
+      - series: 'beacon_finalized_epoch{job="prysm-validator"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 24m
+        alertname: FinalityStalled
+        exp_alerts: []
+      - eval_time: 35m
+        alertname: FinalityStalled
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              summary: "finalized epoch has not advanced in 15 minutes"
+
+  # a brand-new chain has no finality yet
+  - interval: 1m
+    input_series:
+      - series: 'beacon_finalized_epoch{job="teku"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: FinalityStalled
+        exp_alerts: []
+
+  # 5 slots a minute; blocks stop arriving over gossip at minute 10 (10/17)
+  - interval: 1m
+    input_series:
+      - series: 'slotclock_present_slot{job="lighthouse"}'
+        values: '0+5x60'
+      - series: 'gossipsub_topic_msg_recv_counts_total{job="lighthouse",hash="/eth2/00000000/beacon_block/ssz_snappy"}'
+        values: '0+5x10 50x50'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: LighthouseGossipBlocksMissing
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: LighthouseGossipBlocksMissing
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              summary: "lighthouse received 0% of blocks over gossip in 10 minutes"
+              description: "check teku logs for 'Failed to publish beacon_block'; teku and lighthouse must be direct peers on both sides"
+
+  # healthy: every block arrives over gossip
+  - interval: 1m
+    input_series:
+      - series: 'slotclock_present_slot{job="lighthouse"}'
+        values: '0+5x60'
+      - series: 'gossipsub_topic_msg_recv_counts_total{job="lighthouse",hash="/eth2/00000000/beacon_block/ssz_snappy"}'
+        values: '0+5x60'
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: LighthouseGossipBlocksMissing
+        exp_alerts: []
+
+  # teku loses its only peer; lighthouse keeps one on beacon_block
+  - interval: 1m
+    input_series:
+      - series: 'libp2p_peers{job="teku"}'
+        values: '1 1 0x10'
+      - series: 'gossipsub_topic_peers_counts{job="lighthouse",hash="/eth2/00000000/beacon_block/ssz_snappy"}'
+        values: '1x12'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CLPeersZero
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: CLPeersZero
+        exp_alerts:
+          - exp_labels: {severity: page, node: teku, job: teku}
+            exp_annotations:
+              summary: "teku has no consensus-layer peer"
+
+  - interval: 1m
+    input_series:
+      - series: 'libp2p_peers{job="teku"}'
+        values: '1x12'
+      - series: 'gossipsub_topic_peers_counts{job="lighthouse",hash="/eth2/00000000/beacon_block/ssz_snappy"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: CLPeersZero
+        exp_alerts:
+          - exp_labels: {severity: page, node: lighthouse}
+            exp_annotations:
+              summary: "lighthouse has no consensus-layer peer"
