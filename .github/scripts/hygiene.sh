@@ -15,6 +15,6 @@ check() { # name grep-args...
   fi
 }
 check cjk -P '[\x{4e00}-\x{9fff}\x{3000}-\x{303f}\x{ff00}-\x{ffef}]'
-# bracket keeps this script from matching itself
-check names -iE 'cl[a]ude|co-authored-by'
+# brackets keep this script from matching itself
+check names -iE 'cl[a]ude|co-a[u]thored-by'
 exit "$rc"
